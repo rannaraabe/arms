@@ -3,8 +3,6 @@
 {-# LINE 1 ".\tokens.x" #-}
 
 module Main (main) where
-import System.Environment
-
 
 #if __GLASGOW_HASKELL__ >= 603
 #include "ghcconfig.h"
@@ -8437,14 +8435,9 @@ data Token =
   String String
   deriving (Eq,Show)
 
-getFile :: [String] -> String
-getFile (y:_) = y
-getFile _ = ""
-
 main = do
   args <- getArgs
   let file = getFile args
-  
   s <- readFile $ file
   print (alexScanTokens s)
 
