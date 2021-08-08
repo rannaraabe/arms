@@ -1,0 +1,106 @@
+-- Programa-Exemplo:
+
+soma(x: int, y: int):int {
+   return x+y;
+}
+
+main(){
+   z: int = soma(4, 2);
+   print << z;
+}
+
+-- Exemplo2
+
+main(){
+   z = 1: int;
+}
+
+-- Regras Léxicas (ERs - Tokens correspondentes):
+
+$white+                         -- Spaces
+"--"..                          -- Comments
+"("                             -- OpenParenthese
+")"                             -- CloseParenthese
+if                              -- If
+else                            -- Else
+"{"                             -- OpenBracer
+"}"                             -- CloseBracer
+for                             -- For
+return                          -- Return
+":"                             -- Colon
+";"                             -- SemiColon
+while                           -- While
+main                            -- Main
+import                          -- Import
+print                           -- Print
+read                            -- Read
+","                             -- Comma
+">>"                            -- Extraction
+"<<"                            -- Insertion
+in                              -- In
+$digit+                         -- Digit
+"="                             -- Assign
+[+-*/]                          -- Sym
+$alpha [$alpha $digit _ ']      -- Identifier
+
+
+-- Resultado do "analisador léxico":
+
+
+[Var (AlexPn 0 1 1) "soma",OpenParenthese (AlexPn 4 1 5),Var (AlexPn 5 1 6) "x",Colon (AlexPn 6 1 7),Var (AlexPn 8 1 9) "int",Comma (AlexPn 11 1 12),Var (AlexPn 13 1 14) "y",Colon (AlexPn 14 1 15),Var (AlexPn 15 1 16) "int",CloseParenthese (AlexPn 18 1 19),OpenBracer (AlexPn 20 1 21),Return (AlexPn 23 2 9),Var (AlexPn 30 2 16) "x",Sym (AlexPn 32 2 18) '+',Var (AlexPn 34 2 20) "y",SemiColon (AlexPn 35 2 21),CloseBracer (AlexPn 37 3 1),Main (AlexPn 39 4 1),OpenParenthese (AlexPn 43 4 5),CloseParenthese (AlexPn 44 4 6),OpenBracer (AlexPn 45 4 7),Var (AlexPn 48 5 9) "z",Colon (AlexPn 49 5 10),Var (AlexPn 51 5 12) "int",Sym (AlexPn 55 5 16) '=',Var (AlexPn 57 5 18) "soma",OpenParenthese (AlexPn 61 5 22),Int (AlexPn 62 5 23) 4,Comma (AlexPn 63 5 24),Int (AlexPn 64 5 25) 2,CloseParenthese (AlexPn 65 5 26),SemiColon (AlexPn 66 5 27),Print (AlexPn 69 6 9),Insersion (AlexPn 75 6 15),Var (AlexPn 78 6 18) "z",SemiColon (AlexPn 79 6 19),Colon (AlexPn 81 7 1),CloseBracer (AlexPn 83 8 1)]
+
+
+-- Regras Sintáticas para o Programa-Exemplo:
+
+<programa> -> [{<import>}] [{<funcao_dec>}] <principal>
+
+<import> -> Import LITERAL
+
+<funcao_dec> -> ID OpenParenthese  [<argumentos>] CloseParenthese Colon <tipo> OpenBracer [{<comando>}] CloseBracer
+
+<principal> -> Main OpenParenthese <argumentos> CloseParenthese OpenBracer [{<comando>}] CloseBracer
+
+<argumentos> -> <variaveis> [{ Comma <variaveis>}]
+
+<variaveis> -> ID [ Assign <geral_expr> ] [{ Comma ID [Assign <geral_expr> ]}] Colon <tipo>
+
+<comando> -> <atribuicao>SemiColon | <condicional> | <repeticao> | <entrada>SemiColon | <saida>SemiColon | <funcao_chamada>SemiColon | <retorno>SemiColon
+
+<atribuicao> -> ID Assign <geral_expr>
+
+<geral_expr> -> <expr> | <homogeneo_expr>
+
+<expr> -> ID | LITERAL | <fucao_chamada> | <expr> <op> <expr>
+
+<homogeneo_expr> -> <array_expr> | <matrix_expr>  
+
+<condicional> -> If OpenParenthese <expr> CloseParenthese OpenBracer [{<comando>}] CloseBracer [{ Else If OpenParenthese <expr> CloseParenthese OpenBracer [{<comando>}] CloseBracer }] [ Else OpenBracer [{<comando>}] CloseBracer ]
+
+<repeticao> -> For ID In <iteravel> OpenBracer [{<comando>}] CloseBracer 
+             | While OpenParenthese <expr>) CloseParenthese OpenBracer [{<comando>}] CloseBracer
+
+<entrada> -> Read {Extraction ID}
+
+<saida> -> Print {Insertion <expr>}
+
+<funcao_chamada> -> ID OpenParenthese [<literal_id> [{Comma <literal_id>}]] CloseParenthese
+
+<retorno> -> Return <expr>
+
+<op> -> + | - | and | or | not | xor | == | * | / | % 
+
+<literal_id> -> ID | LITERAL
+
+<struct> -> struct ID {[variaveis]}
+
+<array_expr> -> [ [<expr> [{, <expr> }]] ]
+
+<matrix_expr> -> [ <array_expr> [{ , <array_expr> }] ]
+
+<tipo> -> <numerico> | <iteravel> | <outros_tipos>
+
+<numerico> -> int | double | complex
+
+<iteravel> -> num_array | num_matrix | array | array_assoc
+
+<outros_tipos> -> boolean | char 
