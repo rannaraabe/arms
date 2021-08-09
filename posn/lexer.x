@@ -1,5 +1,7 @@
 {
-  module Lexer (main, Token(..), AlexPosn(..), alexScanTokens, token_posn) where
+module Lexer (main, Token(..), AlexPosn(..), alexScanTokens, token_posn, getTokens) where
+import System.IO
+import System.IO.Unsafe
 }
 
 %wrapper "posn"
@@ -86,4 +88,10 @@ token_posn (Assign p) = p
 main = do
   s <- getContents
   print (alexScanTokens s)
+
+getTokens fn = unsafePerformIO (getTokensAux fn)
+
+getTokensAux fn = do fh <- openFile fn ReadMode
+                     s <- hGetContents fh
+                     return (alexScanTokens s)
 }

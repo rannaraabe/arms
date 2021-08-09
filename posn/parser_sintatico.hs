@@ -6,27 +6,31 @@ import Text.Parsec
 -- parsers para os tokens
 
 importToken = tokenPrim show update_pos get_token where
-  get_token Import = Just Import
+    get_token (Import position) = Just $ Import position
+    get_token _    = Nothing
+
+symToken = tokenPrim show update_pos get_token where
+  get_token (Sym position name) = Just $ Sym position name
   get_token _    = Nothing
 
 mainToken = tokenPrim show update_pos get_token where
-  get_token Main = Just Main
+  get_token (Main position) = Just $ Main position
   get_token _    = Nothing
 
 openParentheseToken = tokenPrim show update_pos get_token where
-  get_token OpenParenthese = Just OpenParenthese
+  get_token (OpenParenthese position) = Just $ OpenParenthese position
   get_token _              = Nothing
 
 closeParentheseToken = tokenPrim show update_pos get_token where
-  get_token CloseParenthese = Just CloseParenthese
+  get_token (CloseParenthese position) = Just $ CloseParenthese position
   get_token _               = Nothing
 
 openBracerToken = tokenPrim show update_pos get_token where
-  get_token OpenBracer = Just OpenBracer
+  get_token (OpenBracer position) = Just $ OpenBracer position
   get_token _          = Nothing
 
 closeBracerToken = tokenPrim show update_pos get_token where
-  get_token CloseBracer = Just CloseBracer
+  get_token (CloseBracer position) = Just $ CloseBracer position
   get_token _           = Nothing
 
 -- semiColonToken :: Parsec [Token] st Token
@@ -35,23 +39,25 @@ closeBracerToken = tokenPrim show update_pos get_token where
 --   get_token _         = Nothing
 
 colonToken = tokenPrim show update_pos get_token where
-  get_token Colon  = Just Colon
+  get_token (Colon position)  = Just $ Colon position
   get_token _      = Nothing
 
 identifierToken = tokenPrim show update_pos get_token where
-  get_token Identifier  = Just Identifier
+  get_token (Identifier position name)  = Just $ Identifier position name
   get_token _          = Nothing
 
-symToken = tokenPrim show update_pos get_token where
-  get_token Sym  = Just Sym
-  get_token _    = Nothing
+
 
 intToken = tokenPrim show update_pos get_token where
-  get_token (Int x)  = Just (Int x)
+  get_token (Int position x)  = Just $ Int position x
   get_token _        = Nothing
 
 semiColonToken = tokenPrim show update_pos get_token where
-  get_token SemiColon  = Just SemiColon
+  get_token (SemiColon position)  = Just $ SemiColon position
+  get_token _          = Nothing
+
+assignToken = tokenPrim show update_pos get_token where
+  get_token (Assign position) = Just $ Assign position
   get_token _          = Nothing
 
 update_pos :: SourcePos -> Token -> [Token] -> SourcePos
@@ -195,6 +201,8 @@ remaining_stmts = (do a <- semiColonToken
 
 parser :: [Token] -> Either ParseError [Token]
 parser tokens = runParser program () "Error message" tokens
+
+
 
 main :: IO ()
 main = case parser (getTokens "programaV0.pe") of
