@@ -5,13 +5,23 @@ import Text.Parsec
 
 -- parsers para os tokens
 
-importToken = tokenPrim show update_pos get_token where
-    get_token (Import position) = Just $ Import position
-    get_token _    = Nothing
-
-symToken = tokenPrim show update_pos get_token where
-  get_token (Sym position name) = Just $ Sym position name
+intTypeToken = tokenPrim show update_pos get_token where
+  get_token (IntType position) = Just $ IntType position
   get_token _    = Nothing
+
+doubleTypeToken = tokenPrim show update_pos get_token where
+  get_token (DoubleType position) = Just $ DoubleType position
+  get_token _    = Nothing
+
+importToken :: Parsec [Token] st Token
+importToken = tokenPrim show update_pos get_token where
+  get_token (Import position) = Just $ Import position
+  get_token _    = Nothing
+
+symArithToken :: Parsec [Token] st Token
+symArithToken = tokenPrim show update_pos get_token where
+  get_token (SymArith position name) = Just $ SymArith position name
+  get_token _    = Nothing  
 
 mainToken = tokenPrim show update_pos get_token where
   get_token (Main position) = Just $ Main position
@@ -33,11 +43,6 @@ closeBracerToken = tokenPrim show update_pos get_token where
   get_token (CloseBracer position) = Just $ CloseBracer position
   get_token _           = Nothing
 
--- semiColonToken :: Parsec [Token] st Token
--- identifierColonToken = tokenPrim show update_pos get_token where
---   get_token Identifier = Just Identifier
---   get_token _         = Nothing
-
 colonToken = tokenPrim show update_pos get_token where
   get_token (Colon position)  = Just $ Colon position
   get_token _      = Nothing
@@ -46,11 +51,13 @@ identifierToken = tokenPrim show update_pos get_token where
   get_token (Identifier position name)  = Just $ Identifier position name
   get_token _          = Nothing
 
-
-
 intToken = tokenPrim show update_pos get_token where
-  get_token (Int position x)  = Just $ Int position x
+  get_token (Int position name) = Just $ Int position name
   get_token _        = Nothing
+
+doubleToken = tokenPrim show update_pos get_token where
+  get_token (Double position name) = Just $ Double position name
+  get_token _    = Nothing
 
 semiColonToken = tokenPrim show update_pos get_token where
   get_token (SemiColon position)  = Just $ SemiColon position
@@ -78,25 +85,27 @@ program = do
             eof
             return (a:b:c:[d] ++ e ++ [f])
 
+
+
 stmts :: Parsec [Token] st [Token]
 stmts = do
           first <- assign
-          next <- remaining_stmts
+          next <- assign <|> return []
           return (first ++ next)
+
+
 
 assign :: Parsec [Token] st [Token]
 assign = do
           a <- identifierToken
           b <- assignToken
-          c <- intToken
+          c <- intToken <|> doubleToken
           d <- colonToken
-          e <- identifierToken
+          e <- intTypeToken <|> doubleTypeToken
+          s <- semiColonToken
           return (a:b:c:d:[e])
 
-remaining_stmts :: Parsec [Token] st [Token]
-remaining_stmts = (do a <- semiColonToken
-                      b <- assign
-                      return (a:b)) <|> (return [])
+
 
 
 
@@ -202,10 +211,7 @@ remaining_stmts = (do a <- semiColonToken
 parser :: [Token] -> Either ParseError [Token]
 parser tokens = runParser program () "Error message" tokens
 
-
-
 main :: IO ()
-main = case parser (getTokens "programaV0.pe") of
-            { Left err -> print err; 
-              Right ans -> print ans
-            }
+main = case parser (getTokens "./program_posn.pe") of
+            Left err -> print err 
+            Right ans -> print ans
