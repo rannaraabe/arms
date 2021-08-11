@@ -1,6 +1,6 @@
 # Como rodar
 ```
-$ cd basic
-ghc tokens.hs
-./tokens program.pe
+$ alex lexer.x
+$ ghc parser_sintatico.hs
+$ ./parser_sintatico
 ```
