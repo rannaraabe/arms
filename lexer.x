@@ -14,7 +14,7 @@ $graphic = $printable # $white
 tokens :-
 
   $white+                         ;
-  "--".*.                         ;
+  "//".*.                         ;
   int                             { \p s -> IntType p }
   double                          { \p s -> DoubleType p }
   complex                         { \p s -> ComplexType p }
@@ -50,6 +50,7 @@ tokens :-
   [\-]* $digit+                   { \p s -> Int p (read s) }
   [\-]* $digit+ \. $digit+        { \p s -> Double p (read s) }
   [\+ \- \* \/ \%]                { \p s -> SymArith p (head s) }
+  ("--" | "++") { \p s -> Sym p s }
   $alpha [$alpha $digit \_ ]*     { \p s -> Identifier p s }
 {
 -- Each right-hand side has type :: AlexPosn -> String -> Token
@@ -91,6 +92,7 @@ data Token =
   Int AlexPosn Int           |
   Double AlexPosn Double     |
   SymArith AlexPosn Char     |
+  Sym AlexPosn String        |
   Identifier AlexPosn String 
   deriving (Eq,Show)
 
@@ -129,6 +131,7 @@ token_posn (In p) = p
 token_posn (Int p _) = p
 token_posn (Double p _) = p
 token_posn (SymArith p _) = p
+token_posn (Sym p _) = p
 token_posn (Identifier p _) = p
 
 getTokens fn = unsafePerformIO (getTokensAux fn)

@@ -1,8 +1,9 @@
-soma(x: int, y: int) {
-   return x+y;
-}
+import blabla
+
+soma(x : int, y : int) : int { }
+
+import blablah
 
 main(){
-   z: int = soma(4, 2);
-   print << z;
+   z = 1 -- 1: int;
 }
