@@ -1,8 +1,8 @@
 import blabla
 
 soma(x : int, y : int) : int { }
+ze(x: int) : int { }
 
-import blablah
 
 main(){
    z = 1 -- 1: int;

@@ -2,141 +2,7 @@ module Main where
 
 import Lexer
 import Text.Parsec
-
--- parsers para os tokens
-
-intTypeToken = tokenPrim show update_pos get_token where
-  get_token (IntType position) = Just $ IntType position
-  get_token _    = Nothing
-
-doubleTypeToken = tokenPrim show update_pos get_token where
-  get_token (DoubleType position) = Just $ DoubleType position
-  get_token _    = Nothing
-
-importToken :: Parsec [Token] st Token
-importToken = tokenPrim show update_pos get_token where
-  get_token (Import position) = Just $ Import position
-  get_token _    = Nothing
-
-symArithToken :: Parsec [Token] st Token
-symArithToken = tokenPrim show update_pos get_token where
-  get_token (SymArith position name) = Just $ SymArith position name
-  get_token _    = Nothing
-
-symToken = tokenPrim show update_pos get_token where
-   get_token (Sym position name) = Just $ Sym position name
-   get_token _    = Nothing
-
-mainToken = tokenPrim show update_pos get_token where
-  get_token (Main position) = Just $ Main position
-  get_token _    = Nothing
-
-commaToken = tokenPrim show update_pos get_token where
-  get_token (Comma position) = Just $ Comma position
-  get_token _    = Nothing
-
-
-openParentheseToken = tokenPrim show update_pos get_token where
-  get_token (OpenParenthese position) = Just $ OpenParenthese position
-  get_token _              = Nothing
-
-closeParentheseToken = tokenPrim show update_pos get_token where
-  get_token (CloseParenthese position) = Just $ CloseParenthese position
-  get_token _               = Nothing
-
-openBracerToken = tokenPrim show update_pos get_token where
-  get_token (OpenBracer position) = Just $ OpenBracer position
-  get_token _          = Nothing
-
-closeBracerToken = tokenPrim show update_pos get_token where
-  get_token (CloseBracer position) = Just $ CloseBracer position
-  get_token _           = Nothing
-
-colonToken = tokenPrim show update_pos get_token where
-  get_token (Colon position)  = Just $ Colon position
-  get_token _      = Nothing
-
-identifierToken = tokenPrim show update_pos get_token where
-  get_token (Identifier position name)  = Just $ Identifier position name
-  get_token _          = Nothing
-
-
-
--- symToken = tokenPrim show update_pos get_token where
---   get_token (Sym position name)  = Just $ Sym position name
---   get_token _          = Nothing
-
-intToken :: Parsec [Token] st Token
-intToken = tokenPrim show update_pos get_token where
-  get_token (Int position name) = Just $ Int position name
-  get_token _        = Nothing
-
-doubleToken :: Parsec [Token] st Token
-doubleToken = tokenPrim show update_pos get_token where
-  get_token (Double position name) = Just $ Double position name
-  get_token _    = Nothing
-
-semiColonToken = tokenPrim show update_pos get_token where
-  get_token (SemiColon position)  = Just $ SemiColon position
-  get_token _          = Nothing
-
-assignToken = tokenPrim show update_pos get_token where
-  get_token (Assign position) = Just $ Assign position
-  get_token _          = Nothing
-
-update_pos :: SourcePos -> Token -> [Token] -> SourcePos
-update_pos pos _ (tok:_) = pos -- necessita melhoria
-update_pos pos _ []      = pos
-
-
-ifToken = tokenPrim show update_pos get_token where
-    get_token (If position) = Just $ If position
-    get_token _             = Nothing
-
-elseToken = tokenPrim show update_pos get_token where
-    get_token (Else position) = Just $ Else position
-    get_token _             = Nothing
-
-forToken = tokenPrim show update_pos get_token where
-    get_token (For position) = Just $ For position
-    get_token _             = Nothing
-
-inToken = tokenPrim show update_pos get_token where
-    get_token (In position) = Just $ In position
-    get_token _             = Nothing
-
-whileToken = tokenPrim show update_pos get_token where
-    get_token (While position) = Just $ While position
-    get_token _             = Nothing
-
-breakToken = tokenPrim show update_pos get_token where
-    get_token (Break position) = Just $ Break position
-    get_token _             = Nothing
-
-continueToken = tokenPrim show update_pos get_token where
-    get_token (Continue position) = Just $ Continue position
-    get_token _             = Nothing
-
-returnToken = tokenPrim show update_pos get_token where
-    get_token (Return position) = Just $ Return position
-    get_token _             = Nothing
-
-readToken = tokenPrim show update_pos get_token where
-    get_token (Read position) = Just $ Read position
-    get_token _             = Nothing
-
-extractionToken = tokenPrim show update_pos get_token where
-    get_token (Extraction position) = Just $ Extraction position
-    get_token _             = Nothing
-
-printToken = tokenPrim show update_pos get_token where
-    get_token (Print position) = Just $ Print position
-    get_token _             = Nothing
-
-insersionToken = tokenPrim show update_pos get_token where
-    get_token (Insersion position) = Just $ Insersion position
-    get_token _             = Nothing
-
+import Tokens
 -- parsers para os não-terminais
 
 
@@ -153,10 +19,21 @@ program = do
 
 begin :: Parsec [Token] st [Token]
 begin = (do
-          a <- single_import <|> func_decl -- add var global depois 
+          a <- single_import <|> func_decl <|> var_decl -- add var global depois 
           b <- begin
           return (a ++ b)) <|> (return [])
 
+var_decl :: Parsec [Token] st [Token]
+var_decl = do
+          a <- identifierToken
+          b <- assignToken
+          c <- intToken
+          d <- symToken
+          e <- intToken
+          f <- colonToken
+          g <- typeToken
+          h <- semiColonToken
+          return ([a] ++ [b] ++ [c] ++ [d] ++ [e] ++ [f] ++ g ++ [h])
 
 single_import :: Parsec [Token] st [Token]
 single_import = do
@@ -208,30 +85,13 @@ mainParser = do
             return (a:b:c:[d] ++ e ++ [f])
 
 
-
 stmts :: Parsec [Token] st [Token]
 stmts = do
-          first <- assign
-          next <- assign <|> return []
+          first <- var_decl
+          next <- var_decl <|> return []
           return (first ++ next)
 
-
-
-assign :: Parsec [Token] st [Token]
-assign = do
-          a <- identifierToken
-          b <- assignToken
-          c <- intToken
-          d <- symToken
-          e <- intToken
-          f <- colonToken
-          g <- typeToken
-          h <- semiColonToken
-          return ([a] ++ [b] ++ [c] ++ [d] ++ [e] ++ [f] ++ g ++ [h])
-
-
-
-conditional :: Parsec [Token] st [Token]
+{- conditional :: Parsec [Token] st [Token]
 conditional = do
                 a <- ifToken
                 b <- openParentheseToken
@@ -242,9 +102,9 @@ conditional = do
                 g <- closeBracerToken
                 h <- remaining_conditional
                 i <- end_conditional
-                return (a:[b]++c++d:[e]++f++[g]++h++i)
+                return (a:[b]++c++d:[e]++f++[g]++h++i) -}
 
-remaining_conditional :: Parsec [Token] st [Token]
+{- remaining_conditional :: Parsec [Token] st [Token]
 remaining_conditional = (do
                             a <- elseToken
                             b <- ifToken
@@ -256,7 +116,7 @@ remaining_conditional = (do
                             h <- closeBracerToken
                             i <- remaining_conditionals
                             return (a:b:[c]++d++e:[f]++g++[h]++i))
-                        <|> (return [])
+                        <|> (return []) -}
 
 end_conditional :: Parsec [Token] st [Token]
 end_conditional = (do
@@ -270,12 +130,12 @@ end_conditional = (do
 -- regras <repeticao>
 -- depende das regras <iteravel>, <expr> e <comando>
 
-loop :: Parsec [Token] st [Token] -- talvez possa ser removido
+{- loop :: Parsec [Token] st [Token] -- talvez possa ser removido
 loop = do
         a <- loop_for <|> loop_while
-        return (a)
+        return (a) -}
 
-loop_for :: Parsec [Token] st [Token]
+{- loop_for :: Parsec [Token] st [Token]
 loop_for = do
             a <- forToken
             b <- identifierToken
@@ -284,9 +144,9 @@ loop_for = do
             e <- openBracerToken
             f <- stmts -- <comando>
             g <- closeBracerToken
-            return (a:b:[c]++d++[e]++f++[g])
+            return (a:b:[c]++d++[e]++f++[g]) -}
 
-loop_while :: Parsec [Token] st [Token]
+{- loop_while :: Parsec [Token] st [Token]
 loop_while = do
                 a <- whileToken
                 b <- openParentheseToken
@@ -295,7 +155,7 @@ loop_while = do
                 e <- openBracerToken
                 f <- stmts -- <comando>
                 g <- closeBracerToken
-                return (a:[b]++c++d:[e]++f++[g])
+                return (a:[b]++c++d:[e]++f++[g]) -}
 
 -- regra <entrada>
 
@@ -303,7 +163,7 @@ input :: Parsec [Token] st [Token]
 input = do
             a <- readToken
             b <- remaining_input
-            return (a++b)
+            return ([a]++b)
 
 remaining_input :: Parsec [Token] st [Token]
 remaining_input = do
@@ -315,54 +175,57 @@ remaining_input = do
 -- regra <saida>
 -- depende da regra <expr>
 
-output :: Parsec [Token] st [Token]
+{- output :: Parsec [Token] st [Token]
 output = do
             a <- printToken
             b <- remaining_output
-            return (a++b)
+            return (a:b) -}
 
-remaining_output :: Parsec [Token] st [Token]
+{- remaining_output :: Parsec [Token] st [Token]
 remaining_output = do
                     a <- insersionToken
                     b <- expression -- <expr>
                     c <- remaining_output <|> (return []) -- ver se isso ta certo
-                    return (a:[b]++c)
+                    return (a:[b]++c) -}
 
 -- regra <funcao_chamada>
 -- depende da regra <literal_id>
 
-function_call :: Parsec [Token] st [Token]
+{- function_call :: Parsec [Token] st [Token]
 function_call = do
                 a <- identifierToken
                 b <- openParentheseToken
                 c <- function_call_params
                 d <- closeParentheseToken
-                return (a:[b]++c++[d])
+                return (a:[b]++c++[d]) -}
 
-function_call_params :: Parsec [Token] st [Token]
+{- function_call_params :: Parsec [Token] st [Token]
 function_call_params = (do
                         a <- literal_identifier -- <literal_id>
                         b <- remaining_function_call_params
                         return (a++b))
-                        <|> (return [])
+                        <|> (return []) -}
 
-remaining_function_call_params :: Parsec [Token] st [Token]
-remaining_function_call_params = (do
-                                    a <- commaToken
-                                    b <- literal_identifier -- <literal_id>
-                                    c <- remaining_function_call_params <|> (return []) -- ver se isso ta certo
-                                    return (a:[b]++c)
-                                <|> (return [])
+{- remaining_function_call_params :: Parsec [Token] st [Token]
+remaining_function_call_params = do f <|> return []
+  where f = do
+              a <- commaToken
+              b <- literal_identifier -- <literal_id>
+              c <- remaining_function_call_params <|> (return []) -- ver se isso ta certo
+              return (a:[b]++c) -}
 
 -- regra <retorno>
 -- depende da regra <expr>
 
-return_rule :: Parsec [Token] st [Token]
+{- literal_identifier :: Parsec [Token] st [Token]
+literal_identifier = return <$> intToken <|> doubleToken -}
+
+{- return_rule :: Parsec [Token] st [Token]
 return_rule = do
                 a <- returnToken
                 b <- expression -- <expr>
                 return (a++b)
-
+ -}
 -- command :: Parsec [Token] st [Token]
 -- command = do
 --           a <- assign <|> conditional <|> loop <|> read <|> print <|> funcCall <|> return <|>
