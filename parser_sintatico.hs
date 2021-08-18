@@ -3,12 +3,21 @@ module Main where
 import Lexer
 import Text.Parsec
 import Tokens
+import Text.Parsec.Expr
 -- parsers para os não-terminais
 
 
 typeToken :: Parsec [Token] st [Token]
-typeToken = do a <- intTypeToken <|> doubleTypeToken 
+typeToken = do a <- intTypeToken <|> doubleTypeToken <|> boolTypeToken
                return ([a])
+
+parser :: [Token] -> Either ParseError [Token]
+parser tokens = runParser program () "Error message" tokens
+
+main :: IO ()
+main = case parser (getTokens "./program_posn.pe") of
+            Left err -> print err 
+            Right ans -> print ans
 
 program :: Parsec [Token] st [Token]
 program = do
@@ -18,22 +27,20 @@ program = do
             return (a ++ b)
 
 begin :: Parsec [Token] st [Token]
-begin = (do
-          a <- single_import <|> func_decl <|> var_decl -- add var global depois 
-          b <- begin
-          return (a ++ b)) <|> (return [])
+begin = do
+          a <- try var_decl <|> try func_decl <|> try single_import -- add var global depois 
+          b <- begin <|> return []
+          return (a ++ b)
 
 var_decl :: Parsec [Token] st [Token]
 var_decl = do
           a <- identifierToken
           b <- assignToken
-          c <- intToken
-          d <- symToken
-          e <- intToken
-          f <- colonToken
+          c <- expression
+          d <- colonToken
           g <- typeToken
           h <- semiColonToken
-          return ([a] ++ [b] ++ [c] ++ [d] ++ [e] ++ [f] ++ g ++ [h])
+          return ((a:b:c) ++ (d:g ++ [h]) )
 
 single_import :: Parsec [Token] st [Token]
 single_import = do
@@ -88,10 +95,15 @@ mainParser = do
 stmts :: Parsec [Token] st [Token]
 stmts = do
           first <- var_decl
-          next <- var_decl <|> return []
-          return (first ++ next)
+          return first
 
-{- conditional :: Parsec [Token] st [Token]
+expression :: Parsec [Token] st [Token]
+expression = do
+          a <- expr_bool <|> expr_arith
+          return a
+
+
+conditional :: Parsec [Token] st [Token]
 conditional = do
                 a <- ifToken
                 b <- openParentheseToken
@@ -100,12 +112,47 @@ conditional = do
                 e <- openBracerToken
                 f <- stmts -- <comando>
                 g <- closeBracerToken
-                h <- remaining_conditional
+                h <- remaining_conditionals
                 i <- end_conditional
-                return (a:[b]++c++d:[e]++f++[g]++h++i) -}
+                return (a:[b]++c++d:[e]++f++[g]++h++i)
 
-{- remaining_conditional :: Parsec [Token] st [Token]
-remaining_conditional = (do
+expr_arith :: Parsec [Token] st [Token]
+expr_arith = do
+      a <- ((:[]) <$> (f <|> g <|> h)) <|> j
+      return a
+      where 
+        f = intToken
+        g = doubleToken
+        h = identifierToken
+        j = do
+          expr1 <- f <|> g <|> h
+          operation <- symArithToken <|> symToken
+          expr2 <- expr_arith
+          return ([expr1] ++ [operation] ++ expr2)
+
+-- a and b and c
+expr_bool :: Parsec [Token] st [Token]
+expr_bool = do
+      a <- try expressao <|> valor_simples
+      return a
+    where
+          valor_simples = do
+            d <- identifierToken <|> trueToken <|> falseToken
+            return [d]
+          expressao = do
+              expr1 <- valor_simples
+              operation <- try boolOPToken
+              expr2 <- try expressao
+              return (expr1 ++ [operation] ++ expr2) <|> do return []
+          {- j = do
+              expr1 <- f <|> intToken <|> doubleToken
+              operation <- relOPToken
+              expr2 <- expr_arith <|> return []
+              return ([expr1] ++ [operation] ++ expr2) -}
+    
+
+remaining_conditionals :: Parsec [Token] st [Token]
+remaining_conditionals = (do
                             a <- elseToken
                             b <- ifToken
                             c <- openParentheseToken
@@ -116,7 +163,7 @@ remaining_conditional = (do
                             h <- closeBracerToken
                             i <- remaining_conditionals
                             return (a:b:[c]++d++e:[f]++g++[h]++i))
-                        <|> (return []) -}
+                        <|> (return [])
 
 end_conditional :: Parsec [Token] st [Token]
 end_conditional = (do
@@ -130,12 +177,12 @@ end_conditional = (do
 -- regras <repeticao>
 -- depende das regras <iteravel>, <expr> e <comando>
 
-{- loop :: Parsec [Token] st [Token] -- talvez possa ser removido
+loop :: Parsec [Token] st [Token] -- talvez possa ser removido
 loop = do
         a <- loop_for <|> loop_while
-        return (a) -}
+        return (a)
 
-{- loop_for :: Parsec [Token] st [Token]
+loop_for :: Parsec [Token] st [Token]
 loop_for = do
             a <- forToken
             b <- identifierToken
@@ -144,9 +191,40 @@ loop_for = do
             e <- openBracerToken
             f <- stmts -- <comando>
             g <- closeBracerToken
-            return (a:b:[c]++d++[e]++f++[g]) -}
+            return (a:b:[c]++d++[e]++f++[g])
 
-{- loop_while :: Parsec [Token] st [Token]
+iterable :: Parsec [Token] st [Token]
+iterable = do
+    a <- ( (:[]) <$> f) <|> g
+    return a
+  where f = identifierToken
+        g =  listParser
+
+listParser :: Parsec [Token] st [Token]
+listParser = do
+          abre <- openBracerToken
+          mem <- members 
+          fecha <- closeBracerToken
+          return (abre : mem ++ [fecha])
+      where
+          members = do 
+          i <- identifierToken
+          c <- commaToken
+          g <- members <|> return []
+          return (i:c:g)
+
+         {-  remainigTokens = do
+            a <- f <|> return []
+            return a 
+          f = do
+            i <- identifierToken
+            c <- commaToken
+            r <- remainigTokens
+            return (i:c:r)  -}
+
+
+
+loop_while :: Parsec [Token] st [Token]
 loop_while = do
                 a <- whileToken
                 b <- openParentheseToken
@@ -155,7 +233,7 @@ loop_while = do
                 e <- openBracerToken
                 f <- stmts -- <comando>
                 g <- closeBracerToken
-                return (a:[b]++c++d:[e]++f++[g]) -}
+                return (a:[b]++c++d:[e]++f++[g])
 
 -- regra <entrada>
 
@@ -175,57 +253,59 @@ remaining_input = do
 -- regra <saida>
 -- depende da regra <expr>
 
-{- output :: Parsec [Token] st [Token]
+output :: Parsec [Token] st [Token]
 output = do
             a <- printToken
             b <- remaining_output
-            return (a:b) -}
+            return (a:b)
 
-{- remaining_output :: Parsec [Token] st [Token]
+remaining_output :: Parsec [Token] st [Token]
 remaining_output = do
                     a <- insersionToken
                     b <- expression -- <expr>
                     c <- remaining_output <|> (return []) -- ver se isso ta certo
-                    return (a:[b]++c) -}
+                    return ((a:b) ++ c)
 
 -- regra <funcao_chamada>
 -- depende da regra <literal_id>
 
-{- function_call :: Parsec [Token] st [Token]
+function_call :: Parsec [Token] st [Token]
 function_call = do
                 a <- identifierToken
                 b <- openParentheseToken
                 c <- function_call_params
                 d <- closeParentheseToken
-                return (a:[b]++c++[d]) -}
+                return (a:[b]++c++[d]) 
 
-{- function_call_params :: Parsec [Token] st [Token]
+function_call_params :: Parsec [Token] st [Token]
 function_call_params = (do
                         a <- literal_identifier -- <literal_id>
                         b <- remaining_function_call_params
                         return (a++b))
-                        <|> (return []) -}
+                        <|> (return [])
 
-{- remaining_function_call_params :: Parsec [Token] st [Token]
+remaining_function_call_params :: Parsec [Token] st [Token]
 remaining_function_call_params = do f <|> return []
   where f = do
               a <- commaToken
               b <- literal_identifier -- <literal_id>
               c <- remaining_function_call_params <|> (return []) -- ver se isso ta certo
-              return (a:[b]++c) -}
+              return ([a] ++ b ++ c)
 
 -- regra <retorno>
 -- depende da regra <expr>
 
-{- literal_identifier :: Parsec [Token] st [Token]
-literal_identifier = return <$> intToken <|> doubleToken -}
+literal_identifier :: Parsec [Token] st [Token]
+literal_identifier = do
+  a <- doubleToken <|> intToken <|> trueToken <|> falseToken
+  return [a]
 
-{- return_rule :: Parsec [Token] st [Token]
+return_rule :: Parsec [Token] st [Token]
 return_rule = do
                 a <- returnToken
                 b <- expression -- <expr>
-                return (a++b)
- -}
+                return (a:b)
+ 
 -- command :: Parsec [Token] st [Token]
 -- command = do
 --           a <- assign <|> conditional <|> loop <|> read <|> print <|> funcCall <|> return <|>
@@ -455,11 +535,3 @@ return_rule = do
 --                       return (a:b)) <|> (return [])
 
 -- invocação do parser para o símbolo de partida 
-
-parser :: [Token] -> Either ParseError [Token]
-parser tokens = runParser program () "Error message" tokens
-
-main :: IO ()
-main = case parser (getTokens "./program_posn.pe") of
-            Left err -> print err 
-            Right ans -> print ans

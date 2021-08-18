@@ -9,6 +9,11 @@ intTypeToken = tokenPrim show update_pos get_token where
   get_token (IntType position) = Just $ IntType position
   get_token _    = Nothing
 
+boolTypeToken :: Parsec [Token] st Token
+boolTypeToken = tokenPrim show update_pos get_token where
+  get_token (BooleanType position) = Just $ BooleanType position
+  get_token _    = Nothing
+
 doubleTypeToken :: Parsec [Token] st Token
 doubleTypeToken = tokenPrim show update_pos get_token where
   get_token (DoubleType position) = Just $ DoubleType position
@@ -75,6 +80,26 @@ identifierToken = tokenPrim show update_pos get_token where
 -- symToken = tokenPrim show update_pos get_token where
 --   get_token (Sym position name)  = Just $ Sym position name
 --   get_token _          = Nothing
+
+trueToken ::Parsec [Token] st Token
+trueToken = tokenPrim show update_pos get_token where
+  get_token (TrueSym position) = Just $ TrueSym position
+  get_token _        = Nothing
+
+falseToken :: Parsec [Token] st Token
+falseToken = tokenPrim show update_pos get_token where
+  get_token (FalseSym position) = Just $ FalseSym position
+  get_token _        = Nothing
+
+boolOPToken :: Parsec [Token] st Token
+boolOPToken = tokenPrim show update_pos get_token where
+  get_token (BoolOP position name) = Just $ BoolOP position name 
+  get_token _        = Nothing
+
+relOPToken :: Parsec [Token] st Token
+relOPToken = tokenPrim show update_pos get_token where
+  get_token (RelOP position name) = Just $ RelOP position name 
+  get_token _        = Nothing
 
 intToken :: Parsec [Token] st Token
 intToken = tokenPrim show update_pos get_token where

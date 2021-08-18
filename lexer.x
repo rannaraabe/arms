@@ -50,7 +50,11 @@ tokens :-
   [\-]* $digit+                   { \p s -> Int p (read s) }
   [\-]* $digit+ \. $digit+        { \p s -> Double p (read s) }
   [\+ \- \* \/ \%]                { \p s -> SymArith p (head s) }
-  ("--" | "++") { \p s -> Sym p s }
+  ("--" | "++")                   { \p s -> Sym p s }
+  (and | or | not | xor)          { \p s -> BoolOP p s}
+  ("==" | "!=" | "<=" | ">=" | ">" | "<")  { \p s -> RelOP p s}
+  true                            { \p s -> TrueSym p}
+  false                           { \p s -> FalseSym p}
   $alpha [$alpha $digit \_ ]*     { \p s -> Identifier p s }
 {
 -- Each right-hand side has type :: AlexPosn -> String -> Token
@@ -93,7 +97,11 @@ data Token =
   Double AlexPosn Double     |
   SymArith AlexPosn Char     |
   Sym AlexPosn String        |
-  Identifier AlexPosn String 
+  TrueSym AlexPosn           |
+  FalseSym AlexPosn          |
+  BoolOP AlexPosn String     |
+  RelOP AlexPosn String      |
+  Identifier AlexPosn String
   deriving (Eq,Show)
 
 token_posn (IntType p) = p
@@ -128,6 +136,10 @@ token_posn (Extraction p) = p
 token_posn (Insersion p) = p
 token_posn (Assign p) = p
 token_posn (In p) = p
+token_posn (TrueSym p) = p
+token_posn (FalseSym p) = p
+token_posn (BoolOP p _) = p
+token_posn (RelOP p _) = p
 token_posn (Int p _) = p
 token_posn (Double p _) = p
 token_posn (SymArith p _) = p
