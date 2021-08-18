@@ -1,3 +1,9 @@
+Feito
+- [x] \<programa>
+- [x] \<iniciais>
+- [x] \<argumento>
+- [x] \<import>
+
 Ranna
 
 - [ ] \<struct\>
