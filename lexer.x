@@ -9,7 +9,7 @@ import System.IO.Unsafe
 $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
 $graphic = $printable # $white
-
+@string = \" *($graphic # \")* \"
 
 tokens :-
 
@@ -18,11 +18,12 @@ tokens :-
   int                             { \p s -> IntType p }
   double                          { \p s -> DoubleType p }
   complex                         { \p s -> ComplexType p }
-  num_array                       { \p s -> NumArrayType p }
-  num_matrix                      { \p s -> NumMatrixType p }
+  matrix                          { \p s -> MatrixType p }
   array                           { \p s -> ArrayType p }
   boolean                         { \p s -> BooleanType p }
-  char                            { \p s -> CharType p }
+  string                          { \p s -> StringType p }
+  void                            { \p s -> VoidType p }
+  struct                          { \p s -> Struct p }
   "("                             { \p s -> OpenParenthese p}
   ")"                             { \p s -> CloseParenthese p}
   "["                             { \p s -> OpenBracket p}
@@ -39,33 +40,33 @@ tokens :-
   ";"                             { \p s -> SemiColon p }
   while                           { \p s -> While p }
   main                            { \p s -> Main p }
-  import                          { \p s -> Import p}
   print                           { \p s -> Print p }
   read                            { \p s -> Read p}
   ","                             { \p s -> Comma p}
   ">>"                            { \p s -> Extraction p}
-  "<<"                            { \p s -> Insersion p}
+  "<<"                            { \p s -> Insertion p}
   "="                             { \p s -> Assign p}
   in                              { \p s -> In p }
   [\-]* $digit+                   { \p s -> Int p (read s) }
   [\-]* $digit+ \. $digit+        { \p s -> Double p (read s) }
-  [\+ \- \* \/ \%]                { \p s -> SymArith p (head s) }
   ("--" | "++")                   { \p s -> Sym p s }
-  (and | or | not | xor)          { \p s -> BoolOP p s}
-  ("==" | "!=" | "<=" | ">=" | ">" | "<")  { \p s -> RelOP p s}
+  [\+ \- \* \/ \%]                { \p s -> Sym p s }
+  (and | or | not | xor | "**")   { \p s -> Sym p s}
+  ("==" | "!=" | "<=" | ">=" | ">" | "<")  { \p s -> Sym p s}
   true                            { \p s -> TrueSym p}
   false                           { \p s -> FalseSym p}
   $alpha [$alpha $digit \_ ]*     { \p s -> Identifier p s }
+  @string                         { \p s -> String p s }
 {
 -- Each right-hand side has type :: AlexPosn -> String -> Token
 -- Some action helpers:
 -- The token type:
 data Token =
   IntType AlexPosn           |
+  VoidType AlexPosn          |
   DoubleType AlexPosn        |
   ComplexType AlexPosn       |
-  NumArrayType AlexPosn      |
-  NumMatrixType AlexPosn     |
+  MatrixType AlexPosn        |
   ArrayType AlexPosn         |
   BooleanType AlexPosn       |
   CharType AlexPosn          |
@@ -86,12 +87,11 @@ data Token =
   Colon AlexPosn             |
   While AlexPosn             |
   Main AlexPosn              |
-  Import AlexPosn            |
   Print AlexPosn             |
   Read AlexPosn              |
   Comma AlexPosn             |
   Extraction AlexPosn        |
-  Insersion AlexPosn         |
+  Insertion AlexPosn         |
   Assign AlexPosn            | 
   Int AlexPosn Int           |
   Double AlexPosn Double     |
@@ -101,15 +101,65 @@ data Token =
   FalseSym AlexPosn          |
   BoolOP AlexPosn String     |
   RelOP AlexPosn String      |
+  Struct AlexPosn            |
+  Complex AlexPosn (Token, Token)|
+  String AlexPosn String          |
+  StringType AlexPosn          |
+  Array AlexPosn [Token]    |
+  Matrix AlexPosn [[Token]] |
   Identifier AlexPosn String
-  deriving (Eq,Show)
+
+
+instance Show Token where
+  show (IntType p) = "int"
+  show (DoubleType p) = "double"
+  show (ComplexType p) = "complex"
+  show (ArrayType p) = "array"
+  show (MatrixType p) = "matrix"
+  show (BooleanType _) = "boolean"
+  show (CharType p) = "char"
+  show (In  p) = "in"
+  show (For p) = "for"
+  show (If p) = "if"
+  show (Else p) = "else"
+  show (Return p) = "return"
+  show (Break p) = "break"
+  show (Continue p) = "continue"
+  show (SemiColon p) = ";"
+  show (OpenParenthese p) = "( " ++ show p
+  show (CloseParenthese p) = ")"
+  show (OpenBracket p) =    "["
+  show (CloseBracket p) =   "]"
+  show (OpenBracer p) =     "{"
+  show (CloseBracer p) =    "}"
+  show (Colon p) =          ":"
+  show (While p) =          "while"
+  show (Main p) =           "main" ++ show p
+  show (Print p) =          "print"
+  show (Read p) =           "read"
+  show (Comma p) =          ","
+  show (Extraction p) =     ">>"
+  show (Insertion p) =      "<<"
+  show (Assign p) = "="
+  show (Int p x) = "INT " ++ show x
+  show (Double p x) = "DOUBLE " ++ show x
+  show (SymArith p s) = s:[]
+  show (Sym p s) = s
+  show (TrueSym p) = "true"
+  show (FalseSym p) = "false"
+  show (String _ "") = "\"\""
+  show (String _ s) = s
+  show (StringType _) = "string"
+  show (Identifier _ s) = s
+  show (Struct _) = "struct"
+  show (VoidType p) = "void"
+
 
 token_posn (IntType p) = p
 token_posn (DoubleType p) = p
 token_posn (ComplexType p) = p
-token_posn (NumArrayType p) = p
-token_posn (NumMatrixType p) = p
 token_posn (ArrayType p) = p
+token_posn (MatrixType p) = p
 token_posn (BooleanType p) = p
 token_posn (CharType p) = p
 token_posn (OpenParenthese p) = p
@@ -128,12 +178,11 @@ token_posn (Colon p) = p
 token_posn (SemiColon p) = p
 token_posn (While p) = p
 token_posn (Main p) = p
-token_posn (Import p) = p
 token_posn (Print p) = p
 token_posn (Read p) = p
 token_posn (Comma p) = p
 token_posn (Extraction p) = p
-token_posn (Insersion p) = p
+token_posn (Insertion p) = p
 token_posn (Assign p) = p
 token_posn (In p) = p
 token_posn (TrueSym p) = p
@@ -145,6 +194,10 @@ token_posn (Double p _) = p
 token_posn (SymArith p _) = p
 token_posn (Sym p _) = p
 token_posn (Identifier p _) = p
+token_posn (String p _) = p
+token_posn (StringType p) = p
+token_posn (Struct p) = p
+token_posn (VoidType p) = p
 
 getTokens fn = unsafePerformIO (getTokensAux fn)
 

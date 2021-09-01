@@ -6,49 +6,49 @@ Feito
 
 Ranna
 
-- [ ] \<struct\>
-- [ ] \<funcao_dec>
-- [ ] \<principal>
+- [x] \<struct\>
+- [x] \<funcao_dec>
+- [x] \<principal>
 
 
 Douglas 
-- [ ] \<variaveis_inic>
-- [ ] \<variaveis>
-- [ ] \<variaveis_simpl>
-- [ ] \<variaveis_simpl_atrib>
-- [ ] \<variaveis_array>
+- [x] \<variaveis_inic>
+- [x] \<variaveis>
+- [x] \<variaveis_simpl>
+- [x] \<variaveis_simpl_atrib>
+- [x] \<variaveis_array>
 - [ ] \<variaveis_array_atrib>
 - [ ] \<variaveis_matriz>
 - [ ] \<variaveis_matriz_atrib>
-- [ ] \<comando>
-- [ ] \<variaveis_atrib>
-- [ ] \<expr>
-- [ ] \<expr_bool>
-- [ ] \<op_bool>
-- [ ] \<op_rel>
-- [ ] \<expr_arth_unit>
-- [ ] \<expr_arth>
-- [ ] \<op_arth_left> 
-- [ ] \<op_arth_right>
+- [x] \<comando>
+- [x] \<variaveis_atrib>
+- [x] \<expr>
+- [x] \<expr_bool>
+- [x] \<op_bool>
+- [x] \<op_rel>
+- [x] \<expr_arth_unit>
+- [x] \<expr_arth>
+- [x] \<op_arth_left> 
+- [x] \<op_arth_right>
 
 
 Bruna
-- [ ] \<condicional>
-- [ ] \<repeticao>
-- [ ] \<entrada>
-- [ ] \<saida>
-- [ ] \<funcao_chamada>
-- [ ] \<retorno>
+- [x] \<condicional>
+- [x] \<repeticao>
+- [x] \<entrada>
+- [x] \<saida>
+- [x] \<funcao_chamada>
+- [x] \<retorno>
 
 
 
 João
-- [ ] \<array_expr>
-- [ ] \<homogeneo_expr>
+- [x] \<array_expr>
+- [x] \<homogeneo_expr>
 - [ ] \<matriz_expr>
-- [ ] \<literal_id>
-- [ ] \<tipo>
-- [ ] \<tipo_unit>
-- [ ] \<numerico> 
-- [ ] \<iteravel> 
-- [ ] \<outros_tipos>
+- [x] \<literal_id>
+- [x] \<tipo>
+- [x] \<tipo_unit>
+- [x] \<numerico> 
+- [x] \<iteravel> 
+- [x] \<outros_tipos>
