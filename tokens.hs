@@ -31,6 +31,11 @@ boolTypeToken = tokenPrim show update_pos get_token where
   get_token (BooleanType position) = Just $ BooleanType position
   get_token _    = Nothing
 
+voidTypeToken :: ParsecT [Token] st IO (Token)
+voidTypeToken = tokenPrim show update_pos get_token where
+  get_token (VoidType position) = Just $ VoidType position
+  get_token _    = Nothing
+
 arrayToken :: ParsecT [Token] st IO (Token)
 arrayToken = tokenPrim show update_pos get_token where
   get_token (ArrayType position) = Just $ BooleanType position

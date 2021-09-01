@@ -1,16 +1,7 @@
-fa(x: int, z: string): int {
-   print << "oi" << "f" << z;
-   pi = 3.14 :double;
-   return x - 1000 + pi;
-};
-
 main(){
-   x = "oi" + "ola": string;
-   z = -3: int;
-   print << "oi" << "main";
-   while(z < 0 and 10 != 20 and 5 < 10) {
-      print << z << "asdf";
-      z = z + 1;
-   };
-   return 0;
+   x = 3:int;
+  while( x > 0 and true and true) {
+     print << x;
+     x = x - 1 ;
+  };
 }

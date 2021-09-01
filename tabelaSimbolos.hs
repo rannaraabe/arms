@@ -10,15 +10,14 @@ type Nome = Token
 type Retorno = Token
 type Variavel = (Escopo, Nome, Valor)
 type SubPrograma = (Nome, [Variavel], Retorno, [Token])
-
 type Estado = ([Escopo], [Variavel], [SubPrograma], Bool)
 
 
 cellStr :: Variavel -> String
 cellStr (escopo, name, val ) = escopo ++ " " ++ show name ++ (show val)
 
-symTableInsertVal :: Variavel -> Estado -> Estado
-symTableInsertVal c (es, vs, s, ex) = (es, insertVariable c vs, s, ex)
+symTableInsertVariable :: Variavel -> Estado -> Estado
+symTableInsertVariable c (es, vs, s, ex) = (es, insertVariable c vs, s, ex)
 
 findSubProgram :: Nome -> [SubPrograma] -> [Token]
 findSubProgram n ((name, v, r, pc):xs) 
@@ -45,12 +44,12 @@ pushScope :: Escopo -> Estado -> Estado
 pushScope e (es, v, s, ex) = (e:es, v, s, ex)
 
 popScope :: Estado -> Estado
-popScope (e:es, v, s, ex) = (es, dropEsc e v, s, ex) 
+popScope (e:es, v, s, ex) = (es, dropEsc e v, s, ex)
 
 dropEsc :: Escopo -> [Variavel] -> [Variavel]
 dropEsc _ [] = []
 dropEsc e ((es, name, value):vs)
-    | e == es =  dropEsc e vs
+    | e == es = dropEsc e vs
     | otherwise = (es, name, value) : dropEsc e vs
 
 isExecuting :: Estado -> Bool
@@ -59,9 +58,8 @@ isExecuting (es, vs, s, ex) = ex
 symTableInsertSubProgram :: SubPrograma -> Estado -> Estado
 symTableInsertSubProgram sp (es, vs, s, f) = (es, vs, insertSub sp s, f)
 
-
-symTableUpdataVal :: Variavel -> Estado -> Estado
-symTableUpdataVal (_, name,value) (es, vs, s, ex) = (es, updateVariable es (name, value) vs, s, ex)
+symTableUpdateVariable :: Variavel -> Estado -> Estado
+symTableUpdateVariable (_, name,value) (es, vs, s, ex) = (es, updateVariable es (name, value) vs, s, ex)
 
 turnOnExecution :: Estado -> Estado
 turnOnExecution (es, vs, s, _) = (es, vs, s, True)
@@ -81,12 +79,12 @@ insertVariable (esc, Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
     | esc == esc1 && n == n1 = error $ "Variavel " ++ cellStr (esc, Identifier p n, v) ++ " já exite"
     | otherwise = (esc1, Identifier p1 n1, v1): insertVariable (esc, Identifier p n, v) symbs
 
-symTableGetVal :: Token -> [Variavel] -> Token
-symTableGetVal t [] = error $ "Variavel "++ show t ++" nao declarada"
-symTableGetVal (x) ((_,n, v ):xs) =
+symTableGetValue :: Token -> [Variavel] -> Token
+symTableGetValue t [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValue (x) ((_,n, v ):xs) =
     if n == x
      then v
-     else symTableGetVal (x) xs
+     else symTableGetValue (x) xs
 
 insertSub :: SubPrograma -> [SubPrograma] -> [SubPrograma]
 insertSub (n, vs, r, pc) [] = [(n, vs, r, pc)]
