@@ -138,8 +138,8 @@ instance Show Token where
   show (Print p) =          "print"
   show (Read p) =           "read"
   show (Comma p) =          ","
-  show (Extraction p) =     ">>"
-  show (Insertion p) =      "<<"
+  show (Extraction p) =     ">>" ++ show p
+  show (Insertion p) =      "<<" ++ show p
   show (Assign p) = "="
   show (Int p x) = "INT " ++ show x
   show (Double p x) = "DOUBLE " ++ show x

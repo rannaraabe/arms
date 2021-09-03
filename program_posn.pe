@@ -1,7 +1,24 @@
-main(){
-   x = 3:int;
-  while( x > 0 and true and true) {
-     print << x;
-     x = x - 1 ;
+f(x: int): void {
+  if ( x < 0 and true and true) {
+      x = x + 1 ;
+      print << x;
+  } else if (x >= 3) {
+    print << "cu";
+  } else if (x != 3){
+    print << "oi";
+  } else {
+    print << "e" << "o" << "Robs";
   };
+  while (x <= 0){
+      x = x + 1 ;
+      print << x;
+  };
+};
+
+
+main(){
+  x = 2:int;
+  print << "ola:" << x;
+  f(x);
+  return 0;
 }

@@ -58,6 +58,7 @@ returnRuleSint = do
                 semiColonToken
                 return (a:b)
 
+
 arrayAssSint :: ParsecT [Token] Estado IO [Token]
 arrayAssSint = do
     i <- identifierToken
@@ -100,13 +101,6 @@ remainingArraysSint = f <|> g
             g = do
               c <- closeBracketToken
               return [c]
-
-commandSinc :: ParsecT [Token] Estado IO [Token]
-commandSinc = try arrayDeclSint <|>
-          try varDeclSint <|>
-          try varAssSint <|>
-          try outputSint <|>
-          try arrayAssSint
 
 outputSint :: ParsecT [Token] Estado IO [Token]
 outputSint = do
