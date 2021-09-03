@@ -102,6 +102,22 @@ remainingArraysSint = f <|> g
               c <- closeBracketToken
               return [c]
 
+inputSint :: ParsecT [Token] Estado IO [Token]
+inputSint = do
+            a <- readToken
+            b <- remainingInputSint
+            return (a:b)
+
+remainingInputSint :: ParsecT [Token] Estado IO [Token]
+remainingInputSint = do
+                    a <- extractionToken
+                    b <- expressionSint -- <expr>
+                    c <- remainingInputSint <|> (return []) -- ver se isso ta certo
+                    return (b ++ (String (AlexPn 1 2 3) " "):c)
+
+
+
+
 outputSint :: ParsecT [Token] Estado IO [Token]
 outputSint = do
             a <- printToken

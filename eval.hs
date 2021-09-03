@@ -60,3 +60,8 @@ eval (Int _ x)    (Sym p "<") (Double _ y) = if (fromIntegral x) < (y) then True
 eval (Int _ x)    (Sym p ">") (Double _ y) = if (fromIntegral x) > (y) then TrueSym p else FalseSym p
 eval (Int _ x)    (Sym p "!=") (Double _ y) = if (fromIntegral x) /= (y) then TrueSym p else FalseSym p
 eval a _ b = error $ "type missmatch betwen values: "++  show a ++ " and "++ show b 
+
+cast :: String -> Token -> Token
+cast s (Int p _) = Int p (read s)
+cast s (Double p _) = Double p (read s)
+cast s (String p _) = String p s

@@ -6,6 +6,8 @@ import Tokens
 import Eval
 import Control.Monad.IO.Class
 import System.IO.Unsafe
+import System.Environment
+
 -- parsers para os não-terminais
 
 initialState = (["global"], [], [], False)
@@ -15,9 +17,14 @@ parser :: [Token] -> IO (Either ParseError [Token])
 parser tokens = runParserT program initialState "Error message" tokens
 
 main :: IO ()
-main = case unsafePerformIO (parser (getTokens "./program_posn.pe")) of
-            Left err -> print err
-            Right ans -> print ans
+main = do
+    xs <- getArgs
+    case xs of 
+      [] -> print "nem um programa fornecido"
+      x:_ -> do
+        case unsafePerformIO (parser (getTokens x)) of
+                Left err -> print err
+                Right ans -> return ()
 
 program :: ParsecT [Token] Estado IO [Token]
 program = do
@@ -180,7 +187,9 @@ remainingConditional = try f <|> endConditional <|> return []
           if e == getDefaulValue(BooleanType (AlexPn 1 1 1)) then do
             updateState(turnOnExecution)
             subProgram
+            updateState(turnOffExecution)
             remainingConditionalSint
+            updateState(turnOnExecution)
             return []
           else do
             updateState(turnOffExecution)
@@ -220,6 +229,7 @@ commandSint = try arrayDeclSint <|>
               try arrayAssSint <|>
               varAssSint <|>
               outputSint <|>
+              inputSint <|>
               whileSint <|>
               conditionalSint
 
@@ -229,7 +239,8 @@ command = try arrayDecl <|>
           try varDecl <|>
           try varAss <|>
           try arrayAss <|>
-          output <|>
+          outputParser<|>
+          inputParser<|>
           whileParser <|>
           conditionalParser <|>
           ((:[]) <$> functionCall)
@@ -380,25 +391,27 @@ listParser = do
             c <- commaToken
             r <- remainigTokens
             return (i:c:r)  -}
-
-
-
-
-
 -- regra <entrada>
 
-input :: ParsecT [Token] Estado IO [Token]
-input = do
+inputParser:: ParsecT [Token] Estado IO [Token]
+inputParser= do
             a <- readToken
             vars <- remainingInputs
             ent <- words <$> liftIO getLine
+            updateVariables vars ent
             return ([a]++vars)
 
 updateVariables :: [Token] -> [String] -> ParsecT [Token] Estado IO [Token]
-updateVariables [] [] = error "algo de errado não esta certo"
-updateVariables (x:xs) (v:vs) = do
+updateVariables [] [] = return []
+updateVariables x [] = error "not enouth values"
+updateVariables [] x = error "too many values"
+updateVariables (x:xs) (s:vs) = do
     (es,vr,_ ,_)<- getState
     let v = symTableGetValue x vr
+    let nv = cast s v
+    (e:_,_,_,_) <- getState
+    updateState(symTableUpdateVariable(e, x, nv))
+    updateVariables xs vs
     return []
 
 
@@ -412,8 +425,8 @@ remainingInputs = do
 -- regra <saida>
 -- depende da regra <expr>
 
-output :: ParsecT [Token] Estado IO [Token]
-output = do
+outputParser:: ParsecT [Token] Estado IO [Token]
+outputParser= do
             a <- printToken
             b <- remainingOutputs
             liftIO (putStrLn $ foldr (++) "" (map show b))
