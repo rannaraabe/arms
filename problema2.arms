@@ -1,5 +1,6 @@
 main(){
     teste[2] = [1,2] : array(int);
+    teste3[2] = [1,2] : array(int);
     num = 0: int;
     num2 = teste[1]: int;
     range1 = 0, range2 = 0, range3 = 0, range4 = 0 : int;
@@ -17,8 +18,8 @@ main(){
         read >> num;
     };
 
-    print << "Existem" << range1 << "numeros" << "no" << "intervalo" << "[0," << "25]";
-    print << "Existem" << range2 << "numeros" << "no" << "intervalo" << "[26," << "50]";
-    print << "Existem" << range3 << "numeros" << "no" << "intervalo" << "[51," << "75]";
-    print << "Existem" << range4 << "numeros" << "no" << "intervalo" << "[76," << "100]";
+    print << "Existem" << range1 << "numeros no intervalo [0, 25]";
+    print << "Existem" << range2 << "numeros no intervalo [26, 50]";
+    print << "Existem" << range3 << "numeros no intervalo [51, 75]";
+    print << "Existem" << range4 << "numeros no intervalo [76, 100]";
 }

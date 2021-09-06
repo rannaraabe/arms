@@ -9,7 +9,7 @@ import System.IO.Unsafe
 $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
 $graphic = $printable # $white
-@string = \" *($graphic # \")* \"
+$string = $printable
 
 tokens :-
 
@@ -49,6 +49,7 @@ tokens :-
   in                              { \p s -> In p }
   [\-]* $digit+                   { \p s -> Int p (read s) }
   [\-]* $digit+ \. $digit+        { \p s -> Double p (read s) }
+  \" ($string # \")* \"           { \p s -> String p ( drop 1 ( take ((length s) - 1) s) ) }
   ("--" | "++")                   { \p s -> Sym p s }
   [\+ \- \* \/ \%]                { \p s -> Sym p s }
   (and | or | not | xor | "**")   { \p s -> Sym p s}
@@ -56,7 +57,6 @@ tokens :-
   true                            { \p s -> TrueSym p}
   false                           { \p s -> FalseSym p}
   $alpha [$alpha $digit \_ ]*     { \p s -> Identifier p s }
-  @string                         { \p s -> String p s }
 {
 -- Each right-hand side has type :: AlexPosn -> String -> Token
 -- Some action helpers:

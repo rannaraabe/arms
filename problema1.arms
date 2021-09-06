@@ -3,5 +3,5 @@ main(){
     c = 10 : int;
     result = x*x - y + c : double;
     print << result;
-    print << "O" << "resultado" << "eh:" << result;
+    print << "O resultado eh:" << result;
 }

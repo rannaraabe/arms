@@ -12,7 +12,7 @@ intTypeToken = tokenPrim show update_pos get_token where
 
 stringToken ::ParsecT [Token] st IO (Token)
 stringToken = tokenPrim show update_pos get_token where
-  get_token (String position val) = Just $ String position $ fixStr val
+  get_token (String position val) = Just $ String position $ val
   get_token _    = Nothing
 
 fixStr :: String -> String

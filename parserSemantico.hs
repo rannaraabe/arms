@@ -142,7 +142,7 @@ arrayDecl = do
           assignToken
           l <- literalArray
           if v /= length l then do
-            liftIO (print "deu erro")
+            fail "deu erro"
             return []
           else do
             (e:es, vs, _, _) <- getState
