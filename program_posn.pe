@@ -1,7 +1,0 @@
-main(){
-   x = 3:int;
-  while( x > 0 and true and true) {
-     print << x;
-     x = x - 1 ;
-  };
-}

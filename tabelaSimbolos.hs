@@ -81,10 +81,37 @@ insertVariable (esc, Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
 
 symTableGetValue :: Token -> [Variavel] -> Token
 symTableGetValue t [] = error $ "Variavel "++ show t ++" nao declarada"
-symTableGetValue (x) ((_,n, v ):xs) =
+symTableGetValue (x) ((_, n, v ):xs) =
     if n == x
      then v
      else symTableGetValue (x) xs
+
+symTableGetValueArray :: Token -> Int -> [Variavel] -> Token
+symTableGetValueArray t _ [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValueArray (x) (index) ((_, n, v ):xs) =
+    if n == x
+     then case v of 
+        Array p x -> 
+          if index >= length x || index < 0
+            then error $ "Indice " ++ show index ++ " fora dos limites"
+          else x !! (fromIntegral index)
+        _ -> symTableGetValueArray (x) (index) xs
+    else symTableGetValueArray (x) (index) xs
+
+symTableGetValueMatrix :: Token -> Int -> Int -> [Variavel] -> Token
+symTableGetValueMatrix t _ _ [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValueMatrix (x) (index1) (index2) ((_, n, v ):xs) =
+    if n == x
+     then case v of 
+        Matrix p x -> 
+          if index1 >= length x || index1 < 0
+            then error $ "Indice " ++ show index1 ++ " fora dos limites"
+          else 
+            if index2 >= length (x !! (fromIntegral index1)) || index2 < 0
+              then error $ "Indice " ++ show index2 ++ " fora dos limites"
+            else (x !! (fromIntegral index1)) !! index2
+        _ -> symTableGetValueMatrix (x) (index1) (index2) xs
+    else symTableGetValueMatrix (x) (index1) (index2) xs
 
 insertSub :: SubPrograma -> [SubPrograma] -> [SubPrograma]
 insertSub (n, vs, r, pc) [] = [(n, vs, r, pc)]

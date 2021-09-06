@@ -6,6 +6,8 @@ import Tokens
 import Eval
 import Control.Monad.IO.Class
 import System.IO.Unsafe
+import System.Environment
+
 -- parsers para os não-terminais
 
 initialState = (["global"], [], [], False)
@@ -15,24 +17,27 @@ parser :: [Token] -> IO (Either ParseError [Token])
 parser tokens = runParserT program initialState "Error message" tokens
 
 main :: IO ()
-main = case unsafePerformIO (parser (getTokens "./program_posn.pe")) of
-            Left err -> print err
-            Right ans -> print ans
+main = do
+    xs <- getArgs
+    case xs of
+      [] -> print "nem um programa fornecido"
+      x:_ -> do
+        case unsafePerformIO (parser (getTokens x)) of
+                Left err -> print err
+                Right ans -> return ()
 
 program :: ParsecT [Token] Estado IO [Token]
 program = do
             a <- begin <|> return []
             b <- mainParser
             eof
-            s <- getState
-            liftIO $ print $ "oi" ++ show a ++ "thau"
             return $ a ++ b
 
 begin :: ParsecT [Token] Estado IO [Token]
 begin = do
           a <- try arrayDecl <|>
                try varDecl <|>
-               try funcDecl -- add struct? 
+               funcDecl
           c <- semiColonToken
           b <- begin <|> return []
           return (a ++ [c] ++ b)
@@ -44,46 +49,12 @@ funcDecl  = do
             arg <- args name
             d <- closeParentheseToken
             e <- colonToken
-            ret <- head <$> typeToken -- tipo do retorno
+            ret <- head <$> typeToken 
             inp <- getInput
             s <- getState
             g <- subProgram
-            --liftIO(print "ei eiei eiei")
-           -- liftIO (print $ "inserindo" ++ show (name, arg, ret, inp))
             updateState(symTableInsertSubProgram (name, arg, ret, inp))
-            s <- getState
             return (g)
-
-arrayDecl :: ParsecT [Token] Estado IO [Token]
-arrayDecl = do
-          name <- identifierToken
-          assignToken
-          vec <- literalArray
-          cl <- colonToken
-          ar <- arrayToken
-          ap <- openParentheseToken
-          t <- typeToken
-          cp <- closeParentheseToken
-          return (name:vec ++ ar:ap:t ++ [cp])
-
-
-literalArray ::ParsecT [Token] Estado IO [Token]
-literalArray = do 
-          ob <- openBracketToken
-          first <- literalIdentifier
-          rest <- remainingArrays
-          return (first:rest)
-
-remainingArrays :: ParsecT [Token] Estado IO [Token]
-remainingArrays = f <|> g
-      where f = do
-              comma <- commaToken
-              i <- literalIdentifier
-              rest <- f <|> g
-              return (i:rest)
-            g = do
-              c <- closeBracketToken
-              return []
 
 varAss :: ParsecT [Token] Estado IO [Token]
 varAss = do
@@ -100,6 +71,10 @@ varDecl = do
           name <- identifierToken
           b <- assignToken
           expr <- expression
+          s <- getState
+          -- liftIO (print ((show s) ++ "teste"))
+          liftIO (print s)
+
           (e:_, _, _, _) <- getState
           updateState(symTableInsertVariable (e, name, expr))
           s <- getState
@@ -109,16 +84,7 @@ varDecl = do
           g <- typeToken
           return ((name:b:[expr]) ++ (d:g) )
 
-arrayAss :: ParsecT [Token] Estado IO [Token]
-arrayAss = do
-    i <- identifierToken
-    a <- assignToken
-    l <- literalArray
-    (e:es, vs, _, _) <- getState
-    updateState(symTableUpdateVariable (e, i, Array (AlexPn 1 1 1) l))
-    return (i:a:l)
-
-remainingDecls:: ParsecT [Token] Estado IO [Token]
+remainingDecls :: ParsecT [Token] Estado IO [Token]
 remainingDecls = (do
           c <- commaToken
           name <- identifierToken
@@ -131,12 +97,28 @@ remainingDecls = (do
 
 expression :: ParsecT [Token] Estado IO Token
 expression = do
+    l <- literalIdentifier
+    resto <- remainingExpressions
+    let xs = infixToPostFix $ l:resto
+    let res = evalPostfix xs
+    return res
+
+remainingExpressions :: ParsecT [Token] Estado IO [Token]
+remainingExpressions = f <|> return []
+  where f = do
+              s <- symToken
+              x <- literalIdentifier
+              r <- remainingExpressions <|> return []
+              return $ s:x:r
+
+expressionPrev :: ParsecT [Token] Estado IO Token
+expressionPrev = do
           a <- literalIdentifier
-          result <- remainingExpressions a
+          result <- remainingExpressionsPrev a
           return (result)
 
-remainingExpressions :: Token -> ParsecT [Token] Estado IO Token
-remainingExpressions n1 = (do
+remainingExpressionsPrev :: Token -> ParsecT [Token] Estado IO Token
+remainingExpressionsPrev n1 = (do
                 a <- symToken
                 case a of
                   (Sym p "and") -> do
@@ -147,8 +129,210 @@ remainingExpressions n1 = (do
                           return $ eval n1 (Sym p "or") e
                   _ -> do
                     b <- literalIdentifier
-                    c <- remainingExpressions $ eval n1 a b
+                    c <- remainingExpressionsPrev $ eval n1 a b
                     return $ c) <|> return n1
+
+arrayDecl :: ParsecT [Token] Estado IO [Token]
+arrayDecl = do
+          name <- identifierToken
+          ob <- openBracketToken
+          size <- expression
+          let (Int p v) = typeCompatible size $ getDefaulValue (IntType (AlexPn 1 1 1))
+          cb <- closeBracketToken
+          assignToken
+          l <- literalArray
+          if v /= length l then do
+            liftIO (print "deu erro")
+            return []
+          else do
+            (e:es, vs, _, _) <- getState
+            updateState(symTableInsertVariable (e, name, Array (AlexPn 1 1 1) l))
+            cl <- colonToken
+            ar <- arrayToken
+            ap <- openParentheseToken
+            t <- typeToken
+            cp <- closeParentheseToken
+            return (name:l ++ ar:ap:t ++ [cp])
+
+arrayAss :: ParsecT [Token] Estado IO [Token]
+arrayAss = do
+    i <- identifierToken
+    a <- assignToken
+    l <- literalArray
+    (e:es, vs, _, _) <- getState
+    updateState(symTableUpdateVariable (e, i, Array (AlexPn 1 1 1) l))
+
+    return (i:a:l)
+
+literalArray ::ParsecT [Token] Estado IO [Token]
+literalArray = do 
+          ob <- openBracketToken
+          first <- expression
+          rest <- remainingArrays
+          return (first:rest)
+
+remainingArrays :: ParsecT [Token] Estado IO [Token]
+remainingArrays = f <|> g
+      where f = do
+              comma <- commaToken
+              i <- expression
+              rest <- f <|> g
+              return (i:rest)
+            g = do
+              c <- closeBracketToken
+              return []
+
+
+matrixDecl :: ParsecT [Token] Estado IO [Token]
+matrixDecl = do
+          name <- identifierToken
+          assignToken
+          l <- literalMatrix
+          (e:es, vs, _, _) <- getState
+          updateState(symTableInsertVariable (e, name, Matrix (AlexPn 1 1 1) l))
+          cl <- colonToken
+          ar <- matrixToken
+          ap <- openParentheseToken
+          t <- typeToken
+          cp <- closeParentheseToken
+          return (name:ar:ap:t ++ [cp])
+
+matrixAss :: ParsecT [Token] Estado IO [Token]
+matrixAss = do
+    i <- identifierToken
+    a <- assignToken
+    l <- literalMatrix
+    (e:es, vs, _, _) <- getState
+    updateState(symTableUpdateVariable (e, i, Matrix (AlexPn 1 1 1) l))
+
+    return (i:[a])
+
+literalMatrix ::ParsecT [Token] Estado IO [[Token]]
+literalMatrix = do 
+          ob <- openBracketToken
+          first <- literalArray
+          liftIO (print first)
+          rest <- remainingMatrixes
+
+          return (first:rest)
+
+remainingMatrixes :: ParsecT [Token] Estado IO [[Token]]
+remainingMatrixes = f <|> g
+      where f = do
+              comma <- commaToken
+              i <- literalArray
+              liftIO (print i)
+              rest <- f <|> g
+              return (i:rest)
+            g = do
+              c <- closeBracketToken
+              return []
+
+
+
+conditionalParser :: ParsecT [Token] Estado IO [Token]
+conditionalParser = do
+      ifToken
+      openParentheseToken
+      e <- expression
+      closeParentheseToken
+      updateState(pushScope "if")
+      if e == getDefaulValue(BooleanType (AlexPn 1 1 1)) then do
+        updateState(turnOnExecution)
+        subProgram
+        updateState(popScope)
+        updateState(turnOffExecution)
+        remainingConditionalSint
+        updateState(turnOnExecution)
+        return []
+      else do
+        updateState(turnOffExecution)
+        subProgram
+        remainingConditional
+        return []
+
+remainingConditional :: ParsecT [Token] Estado IO [Token]
+remainingConditional = try elseIf <|> endConditional <|> return []
+    where elseIf = do
+          elseToken
+          ifToken
+          openParentheseToken
+          e <- expression
+          closeParentheseToken
+          if e == getDefaulValue(BooleanType (AlexPn 1 1 1)) then do
+            updateState(pushScope "elseif")
+            updateState(turnOnExecution)
+            subProgram
+            updateState(turnOffExecution)
+            updateState(popScope)
+            remainingConditionalSint
+            updateState(turnOnExecution)
+            return []
+          else do
+            updateState(turnOffExecution)
+            subProgram
+            try remainingConditional <|> endConditional <|> return []
+            return []
+
+endConditional :: ParsecT [Token] Estado IO [Token]
+endConditional = do
+  elseToken
+  updateState(turnOnExecution)
+  updateState(pushScope "else")
+  subProgram
+  updateState(popScope)
+  return []
+
+
+subProgram :: ParsecT [Token] Estado IO [Token]
+subProgram = do
+          s <- getState
+          ob <- openBracerToken
+          first <- if isExecuting s then
+                      command
+                     else
+                      commandSint
+          cm <- semiColonToken
+          rest <- remainingStmts
+          ret <- if isExecuting s then
+                     returnRule <|> return [(VoidType $ AlexPn 1 1 1)]
+                    else
+                      returnRuleSint <|> return [(VoidType $ AlexPn 1 1 1)]
+          cb <- closeBracerToken
+          return ret
+
+commandSint :: ParsecT [Token] Estado IO [Token]
+commandSint = try arrayDeclSint <|>
+              try varDeclSint <|>
+              try arrayAssSint <|>
+              varAssSint <|>
+              outputSint <|>
+              inputSint <|>
+              whileSint <|>
+              conditionalSint
+
+
+command :: ParsecT [Token] Estado IO [Token]
+command = try arrayDecl <|>
+          try matrixDecl <|>
+          try varDecl <|>
+          try varAss <|>
+          try arrayAss <|>
+          outputParser<|>
+          inputParser<|>
+          whileParser <|>
+          conditionalParser <|>
+          ((:[]) <$> functionCall)
+
+whileSint :: ParsecT [Token] Estado IO [Token]
+whileSint = do
+            a <- whileToken
+            b <- openParentheseToken
+            c <- expressionSint
+            d <- closeParentheseToken
+            e <- subProgram
+            return (a:b:c ++ d:e)
+
 
 
 args :: Token -> ParsecT [Token] Estado IO [Variavel]
@@ -181,48 +365,13 @@ mainParser = do
             e <- subProgram
             return (a:b:c:e)
 
-command :: ParsecT [Token] Estado IO [Token]
-command = try arrayDecl <|>
-          try varDecl <|>
-          try varAss <|>
-          try output <|>
-          try whileParser <|>
-          try ((:[]) <$> functionCall) <|>
-          try arrayAss
-
 returnRule :: ParsecT [Token] Estado IO [Token]
 returnRule = do
-    returnToken
+    ret <- returnToken
     e <- expression
-    semiColonToken
     return [e]
 
-{-
- {
-   print << "oi";
-   x =  x + 3;
- }
 
--}
-
-
-subProgram :: ParsecT [Token] Estado IO [Token]
-subProgram = do
-          s <- getState
-          ob <- openBracerToken
-          first <- if isExecuting s then
-                      command
-                     else
-                      commandSinc
-          cm <- semiColonToken
-          rest <- remainingStmts
-          ret <- if isExecuting s then
-                     returnRule <|> return [(VoidType $ AlexPn 1 1 1)]
-                    else
-                      returnRuleSint <|> return [(VoidType $ AlexPn 1 1 1)]
-
-          cb <- closeBracerToken
-          return ret
 
 remainingStmts :: ParsecT [Token] Estado IO [Token]
 remainingStmts = (do
@@ -230,49 +379,41 @@ remainingStmts = (do
                         b <- if isExecuting s then
                                   command
                                 else
-                                  commandSinc
+                                  commandSint
                         sm <- semiColonToken
                         rs <- remainingStmts <|> return []
                         return (b ++ sm:rs)) <|> return []
 
 
-conditional :: ParsecT [Token] Estado IO [Token]
-conditional = do
+conditionalSint :: ParsecT [Token] Estado IO [Token]
+conditionalSint = do
                 a <- ifToken
                 b <- openParentheseToken
-                c <- expression -- <expr>
+                c <- expressionSint -- <expr>
                 d <- closeParentheseToken
-                e <- openBracerToken
-                f <- return []  -- <command>
-                g <- closeBracerToken
-                h <- remainingConditionals
-                i <- endConditional
-                return (a:b:c:d:[e]++f++[g]++h++i)
+                f <- subProgram  -- <command>
+                h <- remainingConditionalSint
+                return (a:b:c ++ d:f ++h)
 
 
 
-remainingConditionals :: ParsecT [Token] Estado IO [Token]
-remainingConditionals = (do
-                            a <- elseToken
-                            b <- ifToken
-                            c <- openParentheseToken
-                            d <- expression -- <expr>
-                            e <- closeParentheseToken
-                            f <- openBracerToken
-                            g <- return [] -- <command>
-                            h <- closeBracerToken
-                            i <- remainingConditionals
-                            return (a:b:c:d:e:f:g++[h]++i))
-                        <|> (return [])
+remainingConditionalSint :: ParsecT [Token] Estado IO [Token]
+remainingConditionalSint = try f <|> endConditionalSint <|> return []
+  where f = do
+              a <- elseToken
+              b <- ifToken
+              c <- openParentheseToken
+              d <- expressionSint
+              e <- closeParentheseToken
+              g <- subProgram
+              i <- try remainingConditionalSint <|> endConditionalSint
+              return (a:b:c:d ++ e:g ++i)
 
-endConditional :: ParsecT [Token] Estado IO [Token]
-endConditional = (do
+endConditionalSint :: ParsecT [Token] Estado IO [Token]
+endConditionalSint = do
                     a <- elseToken
-                    b <- openBracerToken
-                    c <- return [] -- <command>
-                    d <- closeBracerToken
-                    return (a:[b]++c++[d]))
-                <|> (return [])
+                    b <- subProgram
+                    return (a:b)
 
 -- regras <repeticao>
 -- depende das regras <iteravel>, <expr> e <command>
@@ -321,34 +462,27 @@ listParser = do
             c <- commaToken
             r <- remainigTokens
             return (i:c:r)  -}
-
-
-
--- loopWhile :: ParsecT [Token] Estado IO [Token]
--- loopWhile = do
---                 a <- whileToken
---                 b <- openParentheseToken
---                 c <- expression -- <expr>
---                 d <- closeParentheseToken
---                 e <- openBracerToken
---                 f <- return [] -- <command>
---                 g <- closeBracerToken
---                 return (a:b:c:d:e:f++[g])
-
 -- regra <entrada>
 
-input :: ParsecT [Token] Estado IO [Token]
-input = do
+inputParser:: ParsecT [Token] Estado IO [Token]
+inputParser= do
             a <- readToken
             vars <- remainingInputs
             ent <- words <$> liftIO getLine
+            updateVariables vars ent
             return ([a]++vars)
 
 updateVariables :: [Token] -> [String] -> ParsecT [Token] Estado IO [Token]
-updateVariables [] [] = error "algo de errado não esta certo"
-updateVariables (x:xs) (v:vs) = do
+updateVariables [] [] = return []
+updateVariables x [] = fail "not enouth values"
+updateVariables [] x = fail "too many values"
+updateVariables (x:xs) (s:vs) = do
     (es,vr,_ ,_)<- getState
     let v = symTableGetValue x vr
+    let nv = cast s v
+    (e:_,_,_,_) <- getState
+    updateState(symTableUpdateVariable(e, x, nv))
+    updateVariables xs vs
     return []
 
 
@@ -362,8 +496,8 @@ remainingInputs = do
 -- regra <saida>
 -- depende da regra <expr>
 
-output :: ParsecT [Token] Estado IO [Token]
-output = do
+outputParser:: ParsecT [Token] Estado IO [Token]
+outputParser= do
             a <- printToken
             b <- remainingOutputs
             liftIO (putStrLn $ foldr (++) "" (map show b))
@@ -394,13 +528,9 @@ functionCall = do
                 let vars = matchArgs par arg
                 updateState(insertMultVariables vars)
                 updateState(pushScope a)
-                s <- getState
-                liftIO $ print s
                 setInput inp
                 res:_ <- subProgram
                 updateState(popScope)
-                s <- getState
-                liftIO $ print s
                 setInput ret
                 return res
 
@@ -427,15 +557,13 @@ loopWhile pc = do
     updateState(turnOffExecution)
     res <- subProgram
     updateState(popScope)
-    s <- getState
     updateState(turnOnExecution)
     return $ e:res
 
-
-
+--                      ARGS          
 matchArgs :: [Token] -> [Variavel] -> [Variavel]
-matchArgs (t:ts) ((sta, name, valor): ars)
-          = (sta, name, typeCompatible t valor): (matchArgs ts ars)
+matchArgs (t:ts) ((escopo, name, valor): ars)
+          = (escopo, name, typeCompatible t valor): (matchArgs ts ars)
 matchArgs [] [] = []
 
 functionCallParams :: ParsecT [Token] Estado IO [Token]
@@ -459,16 +587,48 @@ literalIdentifier = do
        intToken <|>
        trueToken <|>
        falseToken <|>
+       try matrixAcc <|>
+       try arrayAcc <|>
+       try variable <|>
        try functionCall <|>
-       variable <|>
+       -- matrixAcc <|>
        stringToken
   return a
 
 variable :: ParsecT [Token] Estado IO Token
 variable = do
   v <- identifierToken
+
   (_,s,_,_) <- getState
   let x = symTableGetValue v s
+  return x
+
+arrayAcc :: ParsecT [Token] Estado IO Token
+arrayAcc = do
+  id <- identifierToken
+  ob <- openBracketToken
+  value <- expression
+  cb <- closeBracketToken
+  liftIO (print $ (show value) ++ " ttt")
+  (_,s,_,_) <- getState
+  let (Int p v) = typeCompatible value $ getDefaulValue (IntType (AlexPn 1 1 1))
+  let x = symTableGetValueArray id v s
+  return x
+
+matrixAcc :: ParsecT [Token] Estado IO Token
+matrixAcc = do
+  id <- identifierToken
+  ob <- openBracketToken
+  value1 <- expression
+  cb <- closeBracketToken
+  ob2 <- openBracketToken
+  value2 <- expression
+  cb2 <- closeBracketToken
+  liftIO (print $ (show value2) ++ " ttt")
+  (_,s,_,_) <- getState
+  let (Int p v1) = typeCompatible value1 $ getDefaulValue (IntType (AlexPn 1 1 1))
+  let (Int p v2) = typeCompatible value2 $ getDefaulValue (IntType (AlexPn 1 1 1))
+  let x = symTableGetValueMatrix id v1 v2 s
   return x
 
 
