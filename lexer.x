@@ -140,7 +140,7 @@ instance Show Token where
   show (Comma p) =          ","
   show (Extraction p) =     ">>" ++ show p
   show (Insertion p) =      "<<" ++ show p
-  show (Assign p) = "="
+  show (Assign p) = "=" ++ show p
   show (Int p x) = "INT " ++ show x
   show (Double p x) = "DOUBLE " ++ show x
   show (SymArith p s) = s:[]

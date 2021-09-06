@@ -19,7 +19,7 @@ parser tokens = runParserT program initialState "Error message" tokens
 main :: IO ()
 main = do
     xs <- getArgs
-    case xs of 
+    case xs of
       [] -> print "nem um programa fornecido"
       x:_ -> do
         case unsafePerformIO (parser (getTokens x)) of
@@ -31,7 +31,6 @@ program = do
             a <- begin <|> return []
             b <- mainParser
             eof
-            s <- getState
             return $ a ++ b
 
 begin :: ParsecT [Token] Estado IO [Token]
@@ -50,14 +49,11 @@ funcDecl  = do
             arg <- args name
             d <- closeParentheseToken
             e <- colonToken
-            ret <- head <$> typeToken -- tipo do retorno
+            ret <- head <$> typeToken 
             inp <- getInput
             s <- getState
             g <- subProgram
-            --liftIO(print "ei eiei eiei")
-           -- liftIO (print $ "inserindo" ++ show (name, arg, ret, inp))
             updateState(symTableInsertSubProgram (name, arg, ret, inp))
-            s <- getState
             return (g)
 
 arrayDecl :: ParsecT [Token] Estado IO [Token]
@@ -137,12 +133,28 @@ remainingDecls = (do
 
 expression :: ParsecT [Token] Estado IO Token
 expression = do
+    l <- literalIdentifier
+    resto <- remainingExpressions
+    let xs = infixToPostFix $ l:resto
+    let res = evalPostfix xs
+    return res
+
+remainingExpressions :: ParsecT [Token] Estado IO [Token]
+remainingExpressions = f <|> return []
+  where f = do
+              s <- symToken
+              x <- literalIdentifier
+              r <- remainingExpressions <|> return []
+              return $ s:x:r
+
+expressionPrev :: ParsecT [Token] Estado IO Token
+expressionPrev = do
           a <- literalIdentifier
-          result <- remainingExpressions a
+          result <- remainingExpressionsPrev a
           return (result)
 
-remainingExpressions :: Token -> ParsecT [Token] Estado IO Token
-remainingExpressions n1 = (do
+remainingExpressionsPrev :: Token -> ParsecT [Token] Estado IO Token
+remainingExpressionsPrev n1 = (do
                 a <- symToken
                 case a of
                   (Sym p "and") -> do
@@ -153,7 +165,7 @@ remainingExpressions n1 = (do
                           return $ eval n1 (Sym p "or") e
                   _ -> do
                     b <- literalIdentifier
-                    c <- remainingExpressions $ eval n1 a b
+                    c <- remainingExpressionsPrev $ eval n1 a b
                     return $ c) <|> return n1
 
 conditionalParser :: ParsecT [Token] Estado IO [Token]
@@ -162,10 +174,11 @@ conditionalParser = do
       openParentheseToken
       e <- expression
       closeParentheseToken
+      updateState(pushScope "if")
       if e == getDefaulValue(BooleanType (AlexPn 1 1 1)) then do
-        liftIO $ print "oi True"
         updateState(turnOnExecution)
         subProgram
+        updateState(popScope)
         updateState(turnOffExecution)
         remainingConditionalSint
         updateState(turnOnExecution)
@@ -177,31 +190,35 @@ conditionalParser = do
         return []
 
 remainingConditional :: ParsecT [Token] Estado IO [Token]
-remainingConditional = try f <|> endConditional <|> return []
-    where f = do
+remainingConditional = try elseIf <|> endConditional <|> return []
+    where elseIf = do
           elseToken
           ifToken
           openParentheseToken
           e <- expression
           closeParentheseToken
           if e == getDefaulValue(BooleanType (AlexPn 1 1 1)) then do
+            updateState(pushScope "elseif")
             updateState(turnOnExecution)
             subProgram
             updateState(turnOffExecution)
+            updateState(popScope)
             remainingConditionalSint
             updateState(turnOnExecution)
             return []
           else do
             updateState(turnOffExecution)
             subProgram
-            try remainingConditional <|> endConditional
+            try remainingConditional <|> endConditional <|> return []
             return []
 
 endConditional :: ParsecT [Token] Estado IO [Token]
 endConditional = do
   elseToken
   updateState(turnOnExecution)
+  updateState(pushScope "else")
   subProgram
+  updateState(popScope)
   return []
 
 
@@ -219,7 +236,6 @@ subProgram = do
                      returnRule <|> return [(VoidType $ AlexPn 1 1 1)]
                     else
                       returnRuleSint <|> return [(VoidType $ AlexPn 1 1 1)]
-
           cb <- closeBracerToken
           return ret
 
@@ -288,18 +304,10 @@ mainParser = do
 
 returnRule :: ParsecT [Token] Estado IO [Token]
 returnRule = do
-    returnToken
+    ret <- returnToken
     e <- expression
-    semiColonToken
     return [e]
 
-{-
- {
-   print << "oi";
-   x =  x + 3;
- }
-
--}
 
 
 remainingStmts :: ParsecT [Token] Estado IO [Token]
@@ -403,8 +411,8 @@ inputParser= do
 
 updateVariables :: [Token] -> [String] -> ParsecT [Token] Estado IO [Token]
 updateVariables [] [] = return []
-updateVariables x [] = error "not enouth values"
-updateVariables [] x = error "too many values"
+updateVariables x [] = fail "not enouth values"
+updateVariables [] x = fail "too many values"
 updateVariables (x:xs) (s:vs) = do
     (es,vr,_ ,_)<- getState
     let v = symTableGetValue x vr
@@ -457,11 +465,9 @@ functionCall = do
                 let vars = matchArgs par arg
                 updateState(insertMultVariables vars)
                 updateState(pushScope a)
-                s <- getState
                 setInput inp
                 res:_ <- subProgram
                 updateState(popScope)
-                s <- getState
                 setInput ret
                 return res
 
@@ -488,15 +494,13 @@ loopWhile pc = do
     updateState(turnOffExecution)
     res <- subProgram
     updateState(popScope)
-    s <- getState
     updateState(turnOnExecution)
     return $ e:res
 
-
-
+--                      ARGS          
 matchArgs :: [Token] -> [Variavel] -> [Variavel]
-matchArgs (t:ts) ((sta, name, valor): ars)
-          = (sta, name, typeCompatible t valor): (matchArgs ts ars)
+matchArgs (t:ts) ((escopo, name, valor): ars)
+          = (escopo, name, typeCompatible t valor): (matchArgs ts ars)
 matchArgs [] [] = []
 
 functionCallParams :: ParsecT [Token] Estado IO [Token]
