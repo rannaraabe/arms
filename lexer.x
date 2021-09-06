@@ -128,7 +128,7 @@ instance Show Token where
   show (SemiColon p) = ";"
   show (OpenParenthese p) = "( " ++ show p
   show (CloseParenthese p) = ")"
-  show (OpenBracket p) =    "["
+  show (OpenBracket p) =    "[" ++ show p
   show (CloseBracket p) =   "]"
   show (OpenBracer p) =     "{"
   show (CloseBracer p) =    "}"
@@ -153,6 +153,8 @@ instance Show Token where
   show (Identifier _ s) = s
   show (Struct _) = "struct"
   show (VoidType p) = "void"
+  show (Array p x) = show x
+  show (Matrix p x) = show x
 
 
 token_posn (IntType p) = p

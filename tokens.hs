@@ -38,7 +38,12 @@ voidTypeToken = tokenPrim show update_pos get_token where
 
 arrayToken :: ParsecT [Token] st IO (Token)
 arrayToken = tokenPrim show update_pos get_token where
-  get_token (ArrayType position) = Just $ BooleanType position
+  get_token (ArrayType position) = Just $ ArrayType position
+  get_token _    = Nothing
+
+matrixToken :: ParsecT [Token] st IO (Token)
+matrixToken = tokenPrim show update_pos get_token where
+  get_token (MatrixType position) = Just $ MatrixType position
   get_token _    = Nothing
 
 doubleTypeToken :: ParsecT [Token] st IO (Token)

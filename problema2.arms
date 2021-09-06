@@ -1,5 +1,7 @@
 main(){
+    teste[2] = [1,2] : array(int);
     num = 0: int;
+    num2 = teste[2]: int;
     range1 = 0, range2 = 0, range3 = 0, range4 = 0 : int;
     read >> num;
     while(num!=-1){
