@@ -130,6 +130,14 @@ getDefaulValue (BooleanType p) = TrueSym (AlexPn 1 1 1)
 getDefaulValue (CharType p) = String (AlexPn 1 1 1) ""
 getDefaulValue (StringType p) = String (AlexPn 1 1 1) ""
 
+typeTokenCompatible :: Token -> Token -> Bool
+typeTokenCompatible (IntType _) (Int _ _)  = True
+typeTokenCompatible (DoubleType _) (Double _ _)  = True
+typeTokenCompatible (StringType _) (String _ _)  = True
+typeTokenCompatible (BooleanType _) (Boolean _ _)  = True
+typeTokenCompatible (CharType _) (Char _ _)  = True
+typeTokenCompatible a b  = error $ "Valor " ++ show b ++ " imcompativel com o tipo " ++ show a 
+
 
 typeCompatible :: Valor -> Valor -> Valor
 typeCompatible (Int p x )        (Int _ y)        = Int p x

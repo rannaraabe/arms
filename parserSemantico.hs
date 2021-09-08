@@ -73,15 +73,18 @@ varDecl = do
           expr <- expression
           s <- getState
           -- liftIO (print ((show s) ++ "teste"))
-          liftIO (print s)
 
           (e:_, _, _, _) <- getState
-          updateState(symTableInsertVariable (e, name, expr))
-          s <- getState
-          --liftIO $ print s
-          o <- remainingDecls
+          -- o <- remainingDecls
           d <- colonToken
           g <- typeToken
+
+          let v = typeTokenCompatible (g!!0) (expr)
+          if not v then liftIO (print v)
+            else pure ()
+
+          updateState(symTableInsertVariable (e, name, expr))
+          s <- getState
           return ((name:b:[expr]) ++ (d:g) )
 
 remainingDecls :: ParsecT [Token] Estado IO [Token]
