@@ -89,7 +89,7 @@ varAss = do
     (e:es,_,_,_,_) <- getState
     updateState(symTableUpdateVariable (e, name, val))
     s <- getState
-    liftIO (print s)
+    -- liftIO (print s)
     return (name:a:[val])
 
 varDecl :: ParsecT [Token] Estado IO [Token]
