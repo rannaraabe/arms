@@ -59,7 +59,7 @@ eval (Int _ x)    (Sym p "==") (Double _ y) = if (fromIntegral x) == (y) then Tr
 eval (Int _ x)    (Sym p "<") (Double _ y) = if (fromIntegral x) < (y) then TrueSym p else FalseSym p
 eval (Int _ x)    (Sym p ">") (Double _ y) = if (fromIntegral x) > (y) then TrueSym p else FalseSym p
 eval (Int _ x)    (Sym p "!=") (Double _ y) = if (fromIntegral x) /= (y) then TrueSym p else FalseSym p
-eval a _ b = error $ "type missmatch betwen values: "++  show a ++ " and "++ show b 
+eval a _ b = error $ "Erro - Tipos incompatíveis: "++  show a ++ " e "++ show b 
 
 cast :: String -> Token -> Token
 cast s (Int p _) = Int p (read s)
