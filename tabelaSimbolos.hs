@@ -23,13 +23,13 @@ findSubProgram :: Nome -> [SubPrograma] -> [Token]
 findSubProgram n ((name, v, r, pc):xs) 
     | n == name = pc
     | otherwise = findSubProgram n xs
-findSubProgram n [] = error "funcao não declarada"
+findSubProgram n [] = error "Erro - Função não declarada."
 
 findSubProgramArgs :: Nome -> [SubPrograma] -> [Variavel]
 findSubProgramArgs n ((name, v, r, pc):xs) 
     | n == name = v
     | otherwise = findSubProgramArgs n xs
-findSubProgramArgs n [] = error "funcao não declarada"
+findSubProgramArgs n [] = error "Erro - Função não declarada."
 
 getFunctionStart :: Nome -> Estado -> [Token]
 getFunctionStart name (e, v, s, _) = findSubProgram name s 
@@ -68,7 +68,7 @@ turnOffExecution :: Estado -> Estado
 turnOffExecution (es, vs, s, _) = (es, vs, s, False)
 
 updateVariable :: [Escopo] -> (Nome, Valor) -> [Variavel] -> [Variavel]
-updateVariable es (name, value) [] = error ("Variavel " ++ show name ++ " nao declarada")
+updateVariable es (name, value) [] = error ("Erro - Variável " ++ show name ++ " não declarada.")
 updateVariable es (Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
     | esc1 `elem` es && n == n1 = ((esc1, Identifier p n, v):symbs)
     | otherwise = (esc1, Identifier p1 n1, v1): updateVariable es (Identifier p n, v) symbs
@@ -76,39 +76,39 @@ updateVariable es (Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
 insertVariable :: Variavel -> [Variavel] -> [Variavel]
 insertVariable c [] = [c]
 insertVariable (esc, Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
-    | esc == esc1 && n == n1 = error $ "Variavel " ++ cellStr (esc, Identifier p n, v) ++ " já exite"
+    | esc == esc1 && n == n1 = error $ "Erro - Variável " ++ cellStr (esc, Identifier p n, v) ++ " já existe."
     | otherwise = (esc1, Identifier p1 n1, v1): insertVariable (esc, Identifier p n, v) symbs
 
 symTableGetValue :: Token -> [Variavel] -> Token
-symTableGetValue t [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValue t [] = error $ "Erro - Variável "++ show t ++" não declarada."
 symTableGetValue (x) ((_, n, v ):xs) =
     if n == x
      then v
      else symTableGetValue (x) xs
 
 symTableGetValueArray :: Token -> Int -> [Variavel] -> Token
-symTableGetValueArray t _ [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValueArray t _ [] = error $ "Erro - Variável "++ show t ++" não declarada."
 symTableGetValueArray (x) (index) ((_, n, v ):xs) =
     if n == x
      then case v of 
         Array p x -> 
           if index >= length x || index < 0
-            then error $ "Indice " ++ show index ++ " fora dos limites"
+            then error $ "Erro - Índice " ++ show index ++ " fora dos limites."
           else x !! (fromIntegral index)
         _ -> symTableGetValueArray (x) (index) xs
     else symTableGetValueArray (x) (index) xs
 
 symTableGetValueMatrix :: Token -> Int -> Int -> [Variavel] -> Token
-symTableGetValueMatrix t _ _ [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValueMatrix t _ _ [] = error $ "Erro - Variável "++ show t ++" não declarada."
 symTableGetValueMatrix (x) (index1) (index2) ((_, n, v ):xs) =
     if n == x
      then case v of 
         Matrix p x -> 
           if index1 >= length x || index1 < 0
-            then error $ "Indice " ++ show index1 ++ " fora dos limites"
+            then error $ "Erro - Índice " ++ show index1 ++ " fora dos limites."
           else 
             if index2 >= length (x !! (fromIntegral index1)) || index2 < 0
-              then error $ "Indice " ++ show index2 ++ " fora dos limites"
+              then error $ "Erro - Índice " ++ show index2 ++ " fora dos limites."
             else (x !! (fromIntegral index1)) !! index2
         _ -> symTableGetValueMatrix (x) (index1) (index2) xs
     else symTableGetValueMatrix (x) (index1) (index2) xs
@@ -116,7 +116,7 @@ symTableGetValueMatrix (x) (index1) (index2) ((_, n, v ):xs) =
 insertSub :: SubPrograma -> [SubPrograma] -> [SubPrograma]
 insertSub (n, vs, r, pc) [] = [(n, vs, r, pc)]
 insertSub (n, vs, r, pc) ((n1, vs1, r1, pc1):sps)
-    | n == n1 && r1 == r = error "Funcao ja declarada"
+    | n == n1 && r1 == r = error "Erro - Função já foi declarada."
     | otherwise = (n1, vs1, r1, pc1) : (insertSub (n, vs, r, pc) sps)
     
 
@@ -136,7 +136,7 @@ typeTokenCompatible (DoubleType _) (Double _ _)  = True
 typeTokenCompatible (StringType _) (String _ _)  = True
 typeTokenCompatible (BooleanType _) (Boolean _ _)  = True
 typeTokenCompatible (CharType _) (Char _ _)  = True
-typeTokenCompatible a b  = error $ "Valor " ++ show b ++ " imcompativel com o tipo " ++ show a 
+typeTokenCompatible a b  = error $ "Erro - Valor " ++ show b ++ " imcompatível com o tipo " ++ show a ++ "." 
 
 
 typeCompatible :: Valor -> Valor -> Valor
@@ -150,7 +150,7 @@ typeCompatible (Complex p x )    (Complex _ _)   = Complex p x
 typeCompatible (String p x )        (String _ _)       = String p x
 typeCompatible (Array p x)    (Array _ _)  = Array p x
 typeCompatible (Matrix p x)   (Matrix _ _) = Matrix p x
-typeCompatible b a = error $ "tipos incompatives: " ++ show b ++ " e " ++ show a
+typeCompatible b a = error $ "Erro - Tipos incompatíves: " ++ show b ++ " e " ++ show a
 
 
 instance Eq Token where
