@@ -4,8 +4,6 @@ import TabelaSimbolos
 import Tokens
 import Text.Parsec
 
-
-
 eval :: Token -> Token -> Token -> Token
 eval (Int _ x) (Sym p "%") (Int _ y) = Int p (x `mod` y)
 eval (String p a) (Sym _ "+") (String _ b) = String p (a ++ b)
@@ -13,6 +11,8 @@ eval (Int _ x) (Sym p "+") (Int _ y) = Int p (x + y)
 eval (Int _ x) (Sym p "+") (Double _ y) = Double p (fromIntegral x + y)
 eval (Double _ y) (Sym p "+") (Int _ x) = Double p (fromIntegral x + y)
 eval (Double _ y) (Sym p "+") (Double _ x) = Double p (x + y)
+-- eval (Array _ y) (Sym p "+") (Array _ x) = Array p ((zipWith (+)) x y)
+-- eval (Matrix _ y) (Sym p "+") (Matrix _ x) = Matrix p (zipWith (zipWith (+)) x y)
 eval (Int _ x) (Sym p "*") (Int _ y) = Int p (x * y)
 eval (Int _ x) (Sym p "*") (Double _ y) = Double p (fromIntegral x * y)
 eval (Double _ y) (Sym p "*") (Int _ x) = Double p (fromIntegral x * y)

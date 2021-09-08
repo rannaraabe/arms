@@ -1,0 +1,32 @@
+main(){
+    n = 0, m = 0 : int;
+    read >> n;
+    read >> m;
+
+    matriz[n][m] : matrix(int);
+
+    matriz[0][0] = 3;
+
+    i = 0, j = 0, x = 0 : int;
+    while (i < n) {
+        j = 0;
+        while (j < m) {
+            read >> x;
+            print << x;
+            matriz[i][j] = x;
+            j = j + 1;
+        };
+        i = i + 1;
+    };
+
+    i = 0;
+    j = 0;
+    while (i < n) {
+        j = 0;
+        while (j < m) {
+            print << matriz[i][j];
+            j = j + 1;
+        };
+        i = i + 1;
+    };
+}

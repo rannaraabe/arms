@@ -35,7 +35,9 @@ program = do
 
 begin :: ParsecT [Token] Estado IO [Token]
 begin = do
-          a <- try arrayDecl <|>
+          a <- try arrayDeclAss <|>
+               try matrixDeclAss <|>
+               try arrayDecl <|>
                try varDecl <|>
                structParser <|>
                funcDecl
@@ -87,6 +89,7 @@ varAss = do
     (e:es,_,_,_,_) <- getState
     updateState(symTableUpdateVariable (e, name, val))
     s <- getState
+    liftIO (print s)
     return (name:a:[val])
 
 varDecl :: ParsecT [Token] Estado IO [Token]
@@ -153,6 +156,22 @@ remainingExpressionsPrev n1 = (do
 
 arrayDecl :: ParsecT [Token] Estado IO [Token]
 arrayDecl = do
+            name <- identifierToken
+            ob <- openBracketToken
+            size <- expression
+            let (Int p v) = typeCompatible size $ getDefaulValue (IntType (AlexPn 1 1 1))
+            cb <- closeBracketToken
+            cl <- colonToken
+            ar <- arrayToken
+            ap <- openParentheseToken
+            t:_ <- typeToken
+            cp <- closeParentheseToken
+            (e:es, vs, _, _, _) <- getState
+            updateState(symTableInsertVariable (e, name, Array (AlexPn 1 1 1) (getDefaultArray t v)))
+            return ([name])
+
+arrayDeclAss :: ParsecT [Token] Estado IO [Token]
+arrayDeclAss = do
           name <- identifierToken
           ob <- openBracketToken
           size <- expression
@@ -161,7 +180,7 @@ arrayDecl = do
           assignToken
           l <- literalArray
           if v /= length l then do
-            error $ "declaracao de tamanho diferente"
+            error $ "O array " ++ show name ++ " tem tamanho " ++ show v ++ " e foram atribuidos " ++ show (length l) ++ " elementos"
             return []
           else do
             (e:es, vs, _, _, _) <- getState
@@ -170,7 +189,9 @@ arrayDecl = do
             ar <- arrayToken
             ap <- openParentheseToken
             t <- typeToken
+            -- liftIO (print ("tipo " ++ (show t)))
             cp <- closeParentheseToken
+            -- liftIO (print ("teste array" ++ (show l)))
             return (name:l ++ ar:ap:t ++ [cp])
 
 arrayAss :: ParsecT [Token] Estado IO [Token]
@@ -201,12 +222,78 @@ remainingArrays = f <|> g
               c <- closeBracketToken
               return []
 
+arrayAssElem :: ParsecT [Token] Estado IO [Token]
+arrayAssElem = do
+    i <- identifierToken
+    ob <- openBracketToken
+    index <- expression
+    cb <- closeBracketToken
+
+    let (Int p v_index) = typeCompatible index $ getDefaulValue (IntType (AlexPn 1 1 1))
+
+    a <- assignToken
+    exp <- expression
+
+
+    (e:es, vs, _, _, _) <- getState
+
+    updateState(symTableUpdateArrayElem (e, i, exp) v_index)
+    s <- getState
+
+    return ([])
 
 matrixDecl :: ParsecT [Token] Estado IO [Token]
 matrixDecl = do
           name <- identifierToken
+          ob1 <- openBracketToken
+          size1 <- expression
+          let (Int p1 v1) = typeCompatible size1 $ getDefaulValue (IntType (AlexPn 1 1 1))
+          cb1 <- closeBracketToken
+
+          ob2 <- openBracketToken
+          size2 <- expression
+          let (Int p2 v2) = typeCompatible size2 $ getDefaulValue (IntType (AlexPn 1 1 1))
+          cb2 <- closeBracketToken
+
+          cl <- colonToken
+          ar <- matrixToken
+          ap <- openParentheseToken
+
+          t:_ <- typeToken
+          cp <- closeParentheseToken
+
+          (e:es, vs, _, _, _) <- getState
+
+          updateState(symTableInsertVariable (e, name, Matrix (AlexPn 1 1 1) (getDefaultMatrix t v1 v2)))
+
+          -- liftIO $ print ("a")
+          
+          return ([name])
+
+matrixDeclAss :: ParsecT [Token] Estado IO [Token]
+matrixDeclAss = do
+
+          name <- identifierToken
+          ob1 <- openBracketToken
+          size1 <- expression
+          let (Int p1 v1) = typeCompatible size1 $ getDefaulValue (IntType (AlexPn 1 1 1))
+          cb1 <- closeBracketToken
+
+          ob2 <- openBracketToken
+          size2 <- expression
+          let (Int p2 v2) = typeCompatible size2 $ getDefaulValue (IntType (AlexPn 1 1 1))
+          cb2 <- closeBracketToken
+
           assignToken
+
           l <- literalMatrix
+          
+          if v1 /= length l then do
+            error $ "A matrix " ++ show name ++ " tem " ++ show v1 ++ " linhas e foram atribuidas " ++ show (length l) ++ " linhas"
+            return []
+          
+          else do
+
           (e:es, vs, _, _, _) <- getState
           updateState(symTableInsertVariable (e, name, Matrix (AlexPn 1 1 1) l))
           cl <- colonToken
@@ -245,7 +332,31 @@ remainingMatrixes = f <|> g
               c <- closeBracketToken
               return []
 
+matrixAssElem :: ParsecT [Token] Estado IO [Token]
+matrixAssElem = do
+    i <- identifierToken
+    ob1 <- openBracketToken
+    index1 <- expression
+    cb1 <- closeBracketToken
 
+    let (Int p v_index1) = typeCompatible index1 $ getDefaulValue (IntType (AlexPn 1 1 1))
+
+    ob2 <- openBracketToken
+    index2 <- expression
+    cb2 <- closeBracketToken
+
+    let (Int p v_index2) = typeCompatible index2 $ getDefaulValue (IntType (AlexPn 1 1 1))
+
+    a <- assignToken
+    exp <- expression
+
+
+    (e:es, vs, _, _, _) <- getState
+
+    updateState(symTableUpdateMatrixElem (e, i, exp) v_index1 v_index2)
+    s <- getState
+
+    return ([])
 
 conditionalParser :: ParsecT [Token] Estado IO [Token]
 conditionalParser = do
@@ -373,7 +484,9 @@ commandSint = try arrayDeclSint <|>
 
 
 command :: ParsecT [Token] Estado IO [Token]
-command = try arrayDecl <|>
+command = try arrayAssElem <|>
+          try matrixAssElem <|>
+          try arrayDecl <|>
           try matrixDecl <|>
           try varDecl <|>
           try varAss <|>
@@ -462,25 +575,6 @@ endConditionalSint = do
                     b <- subProgram
                     return (a:b)
 
--- regras <repeticao>
--- depende das regras <iteravel>, <expr> e <command>
-
--- loop :: ParsecT [Token] Estado IO [Token] -- talvez possa ser removido
--- loop = do
---         a <- loopFor <|> loopWhile
---         return (a)
-
--- loopFor :: ParsecT [Token] Estado IO [Token]
--- loopFor = do
---             a <- forToken
---             b <- identifierToken
---             c <- inToken
---             d <- iterable -- <iteravel>
---             e <- openBracerToken
---             f <- return [] -- <command>
---             g <- closeBracerToken
---             return (a:b:[c]++d++[e]++f++[g])
-
 iterable :: ParsecT [Token] Estado IO [Token]
 iterable = do
     a <- ( (:[]) <$> f) <|> g
@@ -501,14 +595,6 @@ listParser = do
           g <- members <|> return []
           return (i:c:g)
 
-         {-  remainigTokens = do
-            a <- f <|> return []
-            return a 
-          f = do
-            i <- identifierToken
-            c <- commaToken
-            r <- remainigTokens
-            return (i:c:r)  -}
 -- regra <entrada>
 
 inputParser:: ParsecT [Token] Estado IO [Token]

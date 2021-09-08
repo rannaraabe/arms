@@ -1,0 +1,13 @@
+mdc(a:int, b:int): int {
+    res = 0 :int;
+    if (b == 0) {
+        res = a;
+    } else {
+        res = mdc(b, a % b);
+    };
+    return res;
+};
+
+main(){
+    print << mdc(4, 8);
+}

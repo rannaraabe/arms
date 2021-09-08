@@ -66,6 +66,12 @@ symTableInsertSubProgram sp (es, vs, s, ts, f) = (es, vs, insertSub sp s, ts, f)
 symTableUpdateVariable :: Variavel -> Estado -> Estado
 symTableUpdateVariable (_, name,value) (es, vs, s, ts, ex) = (es, updateVariable es (name, value) vs, s, ts, ex)
 
+symTableUpdateArrayElem :: Variavel -> Int -> Estado -> Estado
+symTableUpdateArrayElem (_, name,value) index (es, vs, s, ts, ex) = (es, updateArrayElem es (name, value, index) vs, s, ts, ex)
+
+symTableUpdateMatrixElem :: Variavel -> Int -> Int -> Estado -> Estado
+symTableUpdateMatrixElem (_, name,value) index1 index2 (es, vs, s, ts, ex) = (es, updateMatrixElem es (name, value, index1, index2) vs, s, ts, ex)
+
 turnOnExecution :: Estado -> Estado
 turnOnExecution (es, vs, s, ts, _) = (es, vs, s, ts, True)
 
@@ -80,6 +86,25 @@ updateVariable es (name, value) [] = error ("Variavel " ++ show name ++ " nao de
 updateVariable es (Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
     | esc1 `elem` es && n == n1 = ((esc1, Identifier p n, v):symbs)
     | otherwise = (esc1, Identifier p1 n1, v1): updateVariable es (Identifier p n, v) symbs
+
+updateArrayElem :: [Escopo] -> (Nome, Valor, Int) -> [Variavel] -> [Variavel]
+updateArrayElem es (name, value, index) [] = error ("Array " ++ show name ++ " nao declarado")
+updateArrayElem es (Identifier p n, v, index)           ((esc1, Identifier p1 n1, (Array _ v1)):symbs)
+    | index >= length v1 = error $ "Indice " ++ show index ++ " fora dos limites"
+    | esc1 `elem` es && n == n1 = ((esc1, Identifier p n, Array (AlexPn 1 1 1) (take index v1 ++ v : drop (index+1) v1)):symbs)
+    | otherwise = (esc1, Identifier p1 n1, (Array (AlexPn 1 1 1) v1)): updateArrayElem es (Identifier p n, v, index) symbs
+
+updateMatrixElem :: [Escopo] -> (Nome, Valor, Int, Int) -> [Variavel] -> [Variavel]
+updateMatrixElem es (name, value, index1, index2) [] = error ("Matrix " ++ show name ++ " nao declarada")
+updateMatrixElem es (Identifier p n, v, index1, index2) ((esc1, Identifier p1 n1, (Array _ v1)):symbs) = symbs
+
+
+    -- | index1 < 0 || index2 < 0 = error $ "Indices nao podem ser negativos"
+    -- | index1 >= length v1 = error $ "Indice " ++ show index1 ++ " fora dos limites"
+    -- | index2 >= length (v1 !! index1) = error $ "Indice " ++ show index2 ++ " fora dos limites"
+    -- | esc1 `elem` es && n == n1 = ((esc1, Identifier p n, Matrix (AlexPn 1 1 1) ((take index1 v1) ++ [take index2 (v1 !! index1) ++ v : drop (index2 + 1) (v1 !! index1)] ++ (drop (index1 + 1) v1))):symbs)
+    -- | otherwise = (esc1, Identifier p1 n1, (Matrix (AlexPn 1 1 1) v1)): updateMatrixElem es (Identifier p n, v, index1, index2) symbs
+
 
 insertVariable :: Variavel -> [Variavel] -> [Variavel]
 insertVariable c [] = [c]
@@ -156,6 +181,20 @@ getDefaulValue (MatrixType p) = Array (AlexPn 1 1 1) []
 getDefaulValue (BooleanType p) = TrueSym (AlexPn 1 1 1)
 getDefaulValue (CharType p) = String (AlexPn 1 1 1) ""
 getDefaulValue (StringType p) = String (AlexPn 1 1 1) ""
+
+getDefaultArray :: Token -> Int -> [Valor]
+getDefaultArray (IntType p) size = map (const (Int (AlexPn 1 1 1) 0)) [1 .. size]
+getDefaultArray (DoubleType p) size = map (const (Double (AlexPn 1 1 1) 0)) [1 .. size]
+getDefaultArray (BooleanType p) size = map (const (TrueSym (AlexPn 1 1 1))) [1 .. size] 
+getDefaultArray (CharType p) size = map (const (String (AlexPn 1 1 1) "")) [1 .. size] 
+getDefaultArray (StringType p) size = map (const (String (AlexPn 1 1 1) "")) [1 .. size] 
+
+getDefaultMatrix :: Token -> Int -> Int -> [[Valor]]
+getDefaultMatrix (IntType p) size1 size2 = map (const (map (const (Int (AlexPn 1 1 1) 0)) [1 .. size2])) [1 .. size1]
+getDefaultMatrix (DoubleType p) size1 size2 = map (const (map (const (Double (AlexPn 1 1 1) 0)) [1 .. size2])) [1 .. size1]
+getDefaultMatrix (BooleanType p) size1 size2 = map (const (map (const (TrueSym (AlexPn 1 1 1))) [1 .. size2])) [1 .. size1]
+getDefaultMatrix (CharType p) size1 size2 = map (const (map (const (String (AlexPn 1 1 1) "")) [1 .. size2])) [1 .. size1]
+getDefaultMatrix (StringType p) size1 size2 = map (const (map (const (String (AlexPn 1 1 1) "")) [1 .. size2])) [1 .. size1]
 
 
 typeCompatible :: Valor -> Valor -> Valor

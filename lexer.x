@@ -145,8 +145,8 @@ instance Show Token where
   show (Extraction p) =     ">>" ++ show p
   show (Insertion p) =      "<<" ++ show p
   show (Assign p) = "=" ++ show p
-  show (Int p x) = "INT " ++ show x
-  show (Double p x) = "DOUBLE " ++ show x
+  show (Int p x) = show x
+  show (Double p x) = show x
   show (SymArith p s) = s:[]
   show (Sym p s) = s
   show (TrueSym p) = "true"

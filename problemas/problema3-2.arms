@@ -1,0 +1,14 @@
+main(){
+    n = 0, m = 0 : int;
+    n = 1;
+    read >> n;
+    read >> m;
+    vetor[n] : array(int);
+
+    vetor[0] = 1;
+
+    n = 3;
+
+    print << vetor[0];
+
+}

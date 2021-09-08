@@ -1,0 +1,6 @@
+main(){
+    x = 2, y = 3.6 : double;
+    c = 10 : int;
+    result = x*x - y + c : double;
+    print << "O resultado eh:" << result;
+}
