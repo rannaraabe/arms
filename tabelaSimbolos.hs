@@ -9,15 +9,16 @@ type Valor = Token
 type Nome = Token
 type Retorno = Token
 type Variavel = (Escopo, Nome, Valor)
+type Tipo = (String, [(Token, Token)])
 type SubPrograma = (Nome, [Variavel], Retorno, [Token])
-type Estado = ([Escopo], [Variavel], [SubPrograma], Bool)
+type Estado = ([Escopo], [Variavel], [SubPrograma], [Tipo], Bool)
 
 
 cellStr :: Variavel -> String
 cellStr (escopo, name, val ) = escopo ++ " " ++ show name ++ (show val)
 
 symTableInsertVariable :: Variavel -> Estado -> Estado
-symTableInsertVariable c (es, vs, s, ex) = (es, insertVariable c vs, s, ex)
+symTableInsertVariable c (es, vs, s, ts,ex) = (es, insertVariable c vs, s, ts, ex)
 
 findSubProgram :: Nome -> [SubPrograma] -> [Token]
 findSubProgram n ((name, v, r, pc):xs) 
@@ -32,19 +33,23 @@ findSubProgramArgs n ((name, v, r, pc):xs)
 findSubProgramArgs n [] = error "funcao não declarada"
 
 getFunctionStart :: Nome -> Estado -> [Token]
-getFunctionStart name (e, v, s, _) = findSubProgram name s 
+getFunctionStart name (e, v, s, ts, _) = findSubProgram name s 
 
 getFunctionArgs :: Nome -> Estado -> [Variavel]
-getFunctionArgs name (e, v, s, _) = findSubProgramArgs name s
+getFunctionArgs name (e, v, s,ts, _) = findSubProgramArgs name s
 
 insertMultVariables :: [Variavel] -> Estado -> Estado
-insertMultVariables vs (e, v, s, ex) =  (e , vs ++ v, s, ex)
+insertMultVariables vs (e, v, s, ts,ex) =  (e , vs ++ v, s,ts, ex)
 
 pushScope :: Escopo -> Estado -> Estado
-pushScope e (es, v, s, ex) = (e:es, v, s, ex)
+pushScope e (es, v, s, ts, ex) = (e:es, v, s, ts, ex)
 
 popScope :: Estado -> Estado
-popScope (e:es, v, s, ex) = (es, dropEsc e v, s, ex)
+popScope (e:es, v, s, ts, ex) = (es, dropEsc e v, s, ts, ex)
+
+topScope :: Estado -> Escopo
+topScope (e:es, v, s, ts, ex) = e
+
 
 dropEsc :: Escopo -> [Variavel] -> [Variavel]
 dropEsc _ [] = []
@@ -53,19 +58,22 @@ dropEsc e ((es, name, value):vs)
     | otherwise = (es, name, value) : dropEsc e vs
 
 isExecuting :: Estado -> Bool
-isExecuting (es, vs, s, ex) = ex
+isExecuting (es, vs, s, ts, ex) = ex
 
 symTableInsertSubProgram :: SubPrograma -> Estado -> Estado
-symTableInsertSubProgram sp (es, vs, s, f) = (es, vs, insertSub sp s, f)
+symTableInsertSubProgram sp (es, vs, s, ts, f) = (es, vs, insertSub sp s, ts, f)
 
 symTableUpdateVariable :: Variavel -> Estado -> Estado
-symTableUpdateVariable (_, name,value) (es, vs, s, ex) = (es, updateVariable es (name, value) vs, s, ex)
+symTableUpdateVariable (_, name,value) (es, vs, s, ts, ex) = (es, updateVariable es (name, value) vs, s, ts, ex)
 
 turnOnExecution :: Estado -> Estado
-turnOnExecution (es, vs, s, _) = (es, vs, s, True)
+turnOnExecution (es, vs, s, ts, _) = (es, vs, s, ts, True)
+
+setExecution :: Bool -> Estado -> Estado
+setExecution t (es, vs, s, ts, _) = (es, vs, s, ts, t)
 
 turnOffExecution :: Estado -> Estado
-turnOffExecution (es, vs, s, _) = (es, vs, s, False)
+turnOffExecution (es, vs, s, ts, _) = (es, vs, s, ts, False)
 
 updateVariable :: [Escopo] -> (Nome, Valor) -> [Variavel] -> [Variavel]
 updateVariable es (name, value) [] = error ("Variavel " ++ show name ++ " nao declarada")
@@ -79,11 +87,11 @@ insertVariable (esc, Identifier p n, v) ((esc1, Identifier p1 n1, v1):symbs)
     | esc == esc1 && n == n1 = error $ "Variavel " ++ cellStr (esc, Identifier p n, v) ++ " já exite"
     | otherwise = (esc1, Identifier p1 n1, v1): insertVariable (esc, Identifier p n, v) symbs
 
-symTableGetValue :: Token -> [Variavel] -> Token
-symTableGetValue t [] = error $ "Variavel "++ show t ++" nao declarada"
+symTableGetValue :: Token -> [Variavel] -> (Maybe Token)
+symTableGetValue t [] = Nothing
 symTableGetValue (x) ((_, n, v ):xs) =
     if n == x
-     then v
+     then Just  v
      else symTableGetValue (x) xs
 
 symTableGetValueArray :: Token -> Int -> [Variavel] -> Token
@@ -113,12 +121,31 @@ symTableGetValueMatrix (x) (index1) (index2) ((_, n, v ):xs) =
         _ -> symTableGetValueMatrix (x) (index1) (index2) xs
     else symTableGetValueMatrix (x) (index1) (index2) xs
 
+symTableInsertType :: Tipo -> Estado -> Estado
+symTableInsertType t (es, vs, sps, ts, ex) =
+  (es, vs, sps, insertType ts t, ex)
+
+getType :: String -> [Tipo] -> Tipo
+getType s ((nome, atb):xs) 
+  | s == nome = (nome, atb)
+  | otherwise = getType s xs
+getType s [] = error $ "Tipo "++ s ++ " nao declarado"
+
+insertType :: [Tipo] -> Tipo -> [Tipo]
+insertType ts t = if foldr (&&) True $ map (==t) ts then
+                      t:ts
+                  else error $ "Struct " ++ fst t ++ " ja existe"
+
+findType :: String -> [(String, [(Token, Token)])] -> Bool
+findType s = (foldr (&&) True) . map ((==s) . fst)
+
+
 insertSub :: SubPrograma -> [SubPrograma] -> [SubPrograma]
 insertSub (n, vs, r, pc) [] = [(n, vs, r, pc)]
 insertSub (n, vs, r, pc) ((n1, vs1, r1, pc1):sps)
     | n == n1 && r1 == r = error "Funcao ja declarada"
     | otherwise = (n1, vs1, r1, pc1) : (insertSub (n, vs, r, pc) sps)
-    
+
 
 getDefaulValue :: Token -> Valor
 getDefaulValue (IntType p) = Int (AlexPn 1 1 1) 0

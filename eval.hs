@@ -7,6 +7,7 @@ import Text.Parsec
 
 
 eval :: Token -> Token -> Token -> Token
+eval (Int _ x) (Sym p "%") (Int _ y) = Int p (x `mod` y)
 eval (String p a) (Sym _ "+") (String _ b) = String p (a ++ b)
 eval (Int _ x) (Sym p "+") (Int _ y) = Int p (x + y)
 eval (Int _ x) (Sym p "+") (Double _ y) = Double p (fromIntegral x + y)
@@ -81,6 +82,7 @@ precedence (Sym p ">=") = 5
 precedence (Sym p "<=") = 5
 precedence (Sym p "==") = 5
 precedence (Sym p "!=") = 5
+precedence (Sym p "%") = 7
 
 -- retorna se a precedencia de x é maior que a de y
 (#<) :: Token -> Token -> Bool
@@ -96,26 +98,26 @@ isRightAssociativeOperator _ = False
 
 
 infixToPostFix :: [Token] -> [Token]
-infixToPostFix tokens = shuntingYard' tokens [] []
+infixToPostFix tokens = shuntingYard tokens [] []
 
-shuntingYard' :: [Token] -> [Token] -> [Token] -> [Token]
-shuntingYard' [] [] outQueue = reverse outQueue
-shuntingYard' [] (op:ops) outQueue = shuntingYard' [] ops (op:outQueue)
-shuntingYard' (token:tokens) opStack outQueue =
+shuntingYard :: [Token] -> [Token] -> [Token] -> [Token]
+shuntingYard [] [] outQueue = reverse outQueue
+shuntingYard [] (op:ops) outQueue = shuntingYard [] ops (op:outQueue)
+shuntingYard (token:tokens) opStack outQueue =
     case token of 
         (Sym p x) -> case opStack of
-                [] -> shuntingYard' tokens (token:opStack) outQueue
-                (op2:ops) -> if ((isLeftAssociativeOperator token) 
-                                        && ((precedence token) <= (precedence op2))) 
-                                        || ((isRightAssociativeOperator token) 
+                [] -> shuntingYard tokens (token:opStack) outQueue
+                (op2:ops) -> if ((isLeftAssociativeOperator token)
+                                        && ((precedence token) <= (precedence op2)))
+                                        || ((isRightAssociativeOperator token)
                                         && ((precedence token) < (precedence op2)))
-                            then shuntingYard' (token:tokens) ops (op2:outQueue)
-                            else shuntingYard' tokens (token:opStack) outQueue
-        x -> shuntingYard' tokens opStack (x:outQueue)
+                            then shuntingYard (token:tokens) ops (op2:outQueue)
+                            else shuntingYard tokens (token:opStack) outQueue
+        x -> shuntingYard tokens opStack (x:outQueue)
 
 evalPostfix :: [Token] -> Token
 evalPostfix ex = head (foldl func [] ex)
-    where 
+    where
           func (x:y:xs) (Sym p op) = (eval y (Sym p op) x):xs
           func xs digs = digs:xs
 

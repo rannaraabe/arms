@@ -4,6 +4,7 @@ import Lexer
 import TabelaSimbolos
 import Tokens
 import Text.Parsec
+import Control.Monad.IO.Class
 
 typeToken :: ParsecT [Token] Estado IO [Token]
 typeToken = do a <- intTypeToken
@@ -11,7 +12,16 @@ typeToken = do a <- intTypeToken
                 <|> boolTypeToken
                 <|> stringTypeToken
                 <|> voidTypeToken
+                <|> try f
                return ([a])
+    where 
+      f = do
+        Identifier p nome <- identifierToken
+        (es,_,_, ts, _) <- getState
+        if findType nome ts then
+          return $ Identifier p nome
+        else 
+          fail "Tipo inexistente"
 
 varDeclSint :: ParsecT [Token] Estado IO [Token]
 varDeclSint = do
@@ -55,7 +65,6 @@ returnRuleSint :: ParsecT [Token] Estado IO [Token]
 returnRuleSint = do
                 a <- returnToken
                 b <- expressionSint
-                semiColonToken
                 return (a:b)
 
 
@@ -81,8 +90,35 @@ remainingExpressionsSint = (do
 
 literalIdentifierSint :: ParsecT [Token] Estado IO Token
 literalIdentifierSint = do
-  a <- doubleToken <|> intToken <|> trueToken <|> falseToken <|> identifierToken <|> stringToken
+  a <- doubleToken <|> 
+      intToken <|> 
+      trueToken <|>
+      falseToken <|>
+      try (head <$> functionCallSint) <|>
+      identifierToken <|>
+      stringToken
   return a
+
+functionCallSint :: ParsecT [Token] Estado IO [Token]
+functionCallSint = do
+  i <- identifierToken
+  openParentheseToken
+  a <- argsSint
+  closeParentheseToken
+  return $ [i]
+
+argsSint :: ParsecT [Token] Estado IO [Token]
+argsSint = do
+       a <- expressionSint
+       d <- remainingArgsSint <|> return []
+       return (a ++ d)
+
+remainingArgsSint :: ParsecT [Token] Estado IO [Token]
+remainingArgsSint = do
+                  a <- commaToken
+                  b <- expressionSint
+                  e <- remainingArgsSint <|> (return [])
+                  return (a:b ++ e)
 
 literalArraySint ::ParsecT [Token] Estado IO [Token]
 literalArraySint = do 

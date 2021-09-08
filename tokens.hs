@@ -171,10 +171,21 @@ forToken = tokenPrim show update_pos get_token where
     get_token (For position) = Just $ For position
     get_token _             = Nothing
 
+structToken :: ParsecT [Token] st IO (Token)
+structToken = tokenPrim show update_pos get_token where
+    get_token (StructType position) = Just $ StructType position
+    get_token _             = Nothing
+
 inToken :: ParsecT [Token] st IO (Token)
 inToken = tokenPrim show update_pos get_token where
     get_token (In position) = Just $ In position
     get_token _             = Nothing
+
+setaToken :: ParsecT [Token] st IO (Token)
+setaToken = tokenPrim show update_pos get_token where
+    get_token (Seta position) = Just $ Seta position
+    get_token _             = Nothing
+
 
 whileToken :: ParsecT [Token] st IO (Token)
 whileToken = tokenPrim show update_pos get_token where

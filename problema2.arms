@@ -1,10 +1,12 @@
 main(){
     teste[2] = [1,2] : array(int);
     teste3[2] = [1,2] : array(int);
+    teste2[2] = ["oia","2"] : array(string);
     num = 0: int;
     num2 = teste[1]: int;
     range1 = 0, range2 = 0, range3 = 0, range4 = 0 : int;
     read >> num;
+
     while(num!=-1){
         if(num >= 0 and num <= 23 + 2){
             range1 = range1 + 1;

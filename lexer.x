@@ -23,7 +23,7 @@ tokens :-
   boolean                         { \p s -> BooleanType p }
   string                          { \p s -> StringType p }
   void                            { \p s -> VoidType p }
-  struct                          { \p s -> Struct p }
+  struct                          { \p s -> StructType p }
   "("                             { \p s -> OpenParenthese p}
   ")"                             { \p s -> CloseParenthese p}
   "["                             { \p s -> OpenBracket p}
@@ -45,6 +45,7 @@ tokens :-
   ","                             { \p s -> Comma p}
   ">>"                            { \p s -> Extraction p}
   "<<"                            { \p s -> Insertion p}
+  "->"                            { \p s -> Seta p}
   "="                             { \p s -> Assign p}
   in                              { \p s -> In p }
   [\-]* $digit+                   { \p s -> Int p (read s) }
@@ -101,12 +102,15 @@ data Token =
   FalseSym AlexPosn          |
   BoolOP AlexPosn String     |
   RelOP AlexPosn String      |
-  Struct AlexPosn            |
+  StructType AlexPosn        |
+  Seta AlexPosn              |
   Complex AlexPosn (Token, Token)|
   String AlexPosn String          |
   StringType AlexPosn          |
   Array AlexPosn [Token]    |
+  Struct String [(Token, Token)] |
   Matrix AlexPosn [[Token]] |
+
   Identifier AlexPosn String
 
 
@@ -151,10 +155,12 @@ instance Show Token where
   show (String _ s) = s
   show (StringType _) = "string"
   show (Identifier _ s) = s
-  show (Struct _) = "struct"
+  show (StructType _) = "struct"
+  show (Struct s x) = "struct " ++ s ++ ": " ++ show x 
   show (VoidType p) = "void"
   show (Array p x) = show x
   show (Matrix p x) = show x
+  show (Seta p) = "->"
 
 
 token_posn (IntType p) = p
@@ -198,7 +204,7 @@ token_posn (Sym p _) = p
 token_posn (Identifier p _) = p
 token_posn (String p _) = p
 token_posn (StringType p) = p
-token_posn (Struct p) = p
+token_posn (StructType p) = p
 token_posn (VoidType p) = p
 
 getTokens fn = unsafePerformIO (getTokensAux fn)
